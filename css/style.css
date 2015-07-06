@@ -1,0 +1,13 @@
+body {
+  text-align: center;
+  background-color: black;
+  cursor: url(../img/na-cursor.png) 32 31, auto;
+}
+
+canvas {
+  cursor: url(../img/warp-cursor.png) 32 31, auto;
+}
+
+canvas:active {
+  cursor: url(../img/warp-cursor-click.png) 32 31, auto;
+}
