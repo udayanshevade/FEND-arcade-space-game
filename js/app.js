@@ -123,18 +123,18 @@ var allBackgroundImages = [
               'height' : 1000,
               'proximity' : 90,
               'alpha' : 1,
-              'messages' : ['Don\'t have to worry about those thankfully.',
-                          'Asteroids in the rearview mirror' +
-                          'may appear closer than they are.',
-                          'I hate asteroids. Drunk drivers of the universe.',
-                          'Wouldn\'t want to get too close' +
-                          'to one of those...']
+              'messages' : ['']
             }
           ];
 
-// Used to detect keydown
-var keys = [];
+var crashFrames = [];
+for (var m = 0; m < 512; m += 128) {
+  for (var n = 0; n < 768; n += 256) {
+    crashFrames.push({'sx': n, 'sy': m});
+  }
+}
 
+var crashFrameIndex = 0;
 
 
 /*********************************************
@@ -328,6 +328,8 @@ BackgroundObject.prototype.spawn = function() {
 var Protagonist = function() {
   // default ship orientation = downwards
   this.sprite = 'img/protagonist/ship-down.png';
+  // explosion spritesheet
+  this.explosionSrc = 'img/protagonist/blue-explosion.png';
   // sound to be played when player ejects from wormhole
   this.warpSound = 'audio/wormhole.wav';
   this.width = 72;
@@ -351,6 +353,8 @@ var Protagonist = function() {
   this.enteredWarp = false;
   // state describing whole process of warping
   this.warping = false;
+  // state describing crash
+  this.crashed = false;
 };
 
 // Updates the protagonist instance with every animation request
@@ -360,19 +364,17 @@ Protagonist.prototype.update = function() {
   // Checks to ensure player is not warping
   if (!this.warping) {
     warpingSound.pause();
-    // handles key input (optional ~ possible relic)
-    this.handleInput();
-    // moves according to keys pressed
+    // moves according to current velocity
     this.move();
     // default drift upwards
     this.y -= this.drift;
     // keeps player fixed if moving fast ==> better feel
     // and if not warping ==> allows quick access to warp gates
-    if (this.velY > 0.5
+    /*if (this.velY > 0.5
         && !warp.active
         && this.y > canvasHeight/3 - this.height) {
       this.y -= (this.velY - this.drift);
-    }
+    }*/
     // Makes sure player remains visible within bounds
     this.checkBounds();
     // reassigns sprite based on velocity
@@ -383,7 +385,7 @@ Protagonist.prototype.update = function() {
       this.checkWarpEntry();
     }
   }
-  else {
+  else if (this.warping) {
     // play sound when inside wormhole
     warpingSound.volume = 0.5;
     warpingSound.play();
@@ -431,30 +433,6 @@ Protagonist.prototype.render = function() {
                 this.height);
 };
 
-// If player chooses to use keyboard to move .... potential relic
-Protagonist.prototype.handleInput = function() {
-    if (keys[65]) {
-      if (this.velX > -this.maxSpeed) {
-        this.velX--;
-      }
-    }
-    if (keys[68]) {
-      if (this.velX < +this.maxSpeed) {
-        this.velX++;
-      }
-    }
-    if (keys[87]) {
-      if (this.velY > -this.maxSpeed) {
-        this.velY--;
-      }
-    }
-    if (keys[83]) {
-      if (this.velY < +this.maxSpeed) {
-        this.velY++;
-      }
-    }
-};
-
 
 // Mouse movement
 // moves towards current mousedown location
@@ -484,7 +462,7 @@ Protagonist.prototype.moveTowards = function(input) {
 };
 
 
-// Controls player motion through keys ...... potential relic
+// Controls overall player motion
 Protagonist.prototype.move = function() {
   this.x += this.velX;
   this.y += this.velY;
@@ -528,8 +506,10 @@ Protagonist.prototype.checkWarpEntry = function() {
     this.warping = true;
     this.enteredWarp = true;
   }
-}
+};
 
+
+// resets player where new warp gate is placed
 Protagonist.prototype.warp = function(input) {
   this.x = input.x;
   this.y = input.y;
@@ -538,7 +518,14 @@ Protagonist.prototype.warp = function(input) {
 };
 
 
-// Warp gate class
+
+/**********************************************
+
+************ || Warp Gate class || ************
+
+**********************************************/
+
+// declares relevant properties of warp gates
 var Warp = function() {
   this.x = 0;
   this.y = 0;
@@ -551,10 +538,12 @@ var Warp = function() {
   this.angle = 0;
   this.time = 100;
   this.shrinkRate = 0.25;
-  this.fadeRate = this.shrinkRate/10;
+  this.fadeRate = 0.025;
   this.alpha = 1;
 };
 
+
+// renders warp gate image and rotates image
 Warp.prototype.render = function() {
   var centerX = this.x + this.side/2;
   var centerY = this.y + this.side/2;
@@ -624,7 +613,174 @@ Warp.prototype.place = function(input) {
 }
 
 
+/**********************************************
 
+************ || Asteroid class || *************
+
+**********************************************/
+
+// declares basic asteroid properties
+var Asteroid = function() {
+  this.side = 45;
+  this.x = canvasWidth/2 - this.side/2;
+  this.y = canvasHeight;
+  this.angle = Math.random() * tau;
+  this.src = 'img/asteroid-1.png';
+  this.maxVelY = -20;
+  this.velY = Math.random() * this.maxVelY;
+  this.acceleration = 1.008;
+  this.rotationRate = Math.random() * 0.25;
+  this.enteredWarp = false;
+  this.warping = false;
+}
+
+// updates asteroid properties
+Asteroid.prototype.update = function(dt) {
+  this.rotate();
+  if (!this.warping) {
+    // moves according to randomly generated velocity
+    this.move(dt);
+    // resets if asteroid moves out of bounds
+    this.checkBounds();
+    // checks if asteroid has crashed into player
+    this.checkCrash();
+    // makes sure only to check warp entry if gate is warpable
+    // prevents rewarping on exit
+    if (warp.warpable) {
+      this.checkWarpEntry();
+    }
+  }
+  else {
+    /* play sound when inside wormhole
+    warpingSound.volume = 0.5;
+    warpingSound.play();
+    */
+  }
+  if (this.enteredWarp) {
+    // warp gate fades out of view immediately
+    warp.fade();
+    // if warp gate fades away ==> we are past entry
+    if (warp.alpha < warp.fadeRate) {
+      this.enteredWarp = false;
+    }
+  }
+};
+
+Asteroid.prototype.checkCrash = function() {
+  var halfShipWidth = protagonist.width/2;
+  var halfShipHeight = protagonist.height/2;
+  // recalculates center as player position changes
+  var thisCenterX = this.x + this.side/2;
+  var thisCenterY = this.y + this.side/2;
+  var protagonistCenterX = protagonist.x + halfShipWidth;
+  var protagonistCenterY = protagonist.y + halfShipHeight;
+  var xDist = Math.abs(thisCenterX - protagonistCenterX);
+  var yDist = Math.abs(thisCenterY - protagonistCenterY);
+  if (xDist < halfShipWidth && yDist < halfShipHeight) {
+    this.crashing = true;
+  }
+};
+
+Asteroid.prototype.animateCrash = function(x, y) {
+  var sx = crashFrames[crashFrameIndex].sx;
+  var sy = crashFrames[crashFrameIndex].sy;
+  ctx.drawImage(Resources.get(protagonist.explosionSrc),
+                sx,
+                sy,
+                256,
+                128,
+                x - 128,
+                y - 64,
+                256,
+                128);
+  if (crashFrameIndex < crashFrames.length - 1) {
+    crashFrameIndex++;
+  }
+  else {
+    crashFrameIndex = 0;
+    this.crashing = false;
+    this.reset();
+  }
+};
+
+// renders asteroid image and rotates image
+Asteroid.prototype.render = function() {
+  if (!this.crashing) {
+    var centerX = this.x + this.side/2;
+    var centerY = this.y + this.side/2;
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.rotate(this.angle);
+    ctx.translate(-centerX, -centerY);
+    ctx.drawImage(Resources.get(this.src),
+                  this.x,
+                  this.y,
+                  this.side,
+                  this.side);
+    ctx.restore();
+  }
+  else {
+    this.animateCrash(this.x, this.y);
+  }
+};
+
+// controls asteroid motion
+Asteroid.prototype.move = function(dt) {
+  this.y += this.velY * dt;
+  this.velY *= this.acceleration;
+};
+
+Asteroid.prototype.rotate = function() {
+  if (this.angle < tau) {
+    this.angle += tau * dt * this.rotationRate;
+  }
+  else {
+    this.angle = 0;
+  }
+};
+
+// checks when asteroid travels out visible bounds
+Asteroid.prototype.checkBounds = function() {
+  if (this.x + this.side < 0
+    || this.x > canvasWidth
+    || this.y + this.side < 0
+    || this.y > canvasHeight) {
+    this.reset();
+  }
+};
+
+
+// for when asteroid reaches out of bounds and must be reset
+Asteroid.prototype.reset = function() {
+  this.x = this.side/2 + Math.random() * canvasWidth - this.side;
+  this.y = canvasHeight;
+  this.velY = Math.random() * this.maxVelY;
+};
+
+// checks if asteroid is inside warp gate
+Asteroid.prototype.checkWarpEntry = function() {
+  var halfWarpSide = warp.side/2;
+  // recalculates center as player position changes
+  var thisCenterX = this.x + this.side/2;
+  var thisCenterY = this.y + this.side/2;
+  var warpCenterX = warp.x + halfWarpSide;
+  var warpCenterY = warp.y + halfWarpSide;
+  var xDist = Math.abs(thisCenterX - warpCenterX);
+  var yDist = Math.abs(thisCenterY - warpCenterY);
+  if (xDist < halfWarpSide && yDist < halfWarpSide) {
+    this.warping = true;
+    this.enteredWarp = true;
+    warp.fading = true;
+  }
+};
+
+// resets player where new warp gate is placed
+Asteroid.prototype.warp = function(input) {
+  this.x = input.x;
+  this.y = input.y;
+  //Resources.get(warp.sound).play();
+  warp.fading = false;
+};
 
 
 /*****
@@ -635,8 +791,8 @@ protagonist = new Protagonist();
 
 warp = new Warp();
 
-starQuadrants = [];
-
+// For background star tile objects
+var starQuadrants = [];
 var quadrantsIndex = 0;
 
 for (var w = -512; w < canvasWidth + 512; w += 512) {
@@ -646,8 +802,9 @@ for (var w = -512; w < canvasWidth + 512; w += 512) {
   }
 }
 
-allBackgroundObjects = [];
 
+// For background image objects
+allBackgroundObjects = [];
 var objectsIndex = 0;
 
 allBackgroundImages.forEach(function(bgObj) {
@@ -662,12 +819,10 @@ allBackgroundImages.forEach(function(bgObj) {
 });
 
 
-// This listens for key presses and sends the keys to your
-// Player.handleInput() method. You don't need to modify this.
-document.addEventListener('keydown', function (e) {
-  keys[e.keyCode] = true;
-});
+// For asteroid objects
+var maxAsteroids = 1;
+var allAsteroids = [];
 
-document.addEventListener('keyup', function (e) {
-  keys[e.keyCode] = false;
-});
+for (var asteroidIndex = 0; asteroidIndex < maxAsteroids; asteroidIndex++) {
+  allAsteroids[asteroidIndex] = new Asteroid();
+}

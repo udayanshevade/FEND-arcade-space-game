@@ -23,7 +23,7 @@ var Engine = (function(global) {
         win = global.window,
         canvas = doc.createElement('canvas'),
         ctx = canvas.getContext('2d'),
-        allImages = [],
+        gameState = 'Playing',
         lastTime;
 
 
@@ -77,18 +77,29 @@ var Engine = (function(global) {
 
     // Listens for double click to place warp gate
     canvas.addEventListener('dblclick', function(e) {
-        if (!warp.active) {
-            if (!protagonist.warping) {
-                warp.warpable = true;
-            }
-            warp.active = true;
-            warp.place(mousePos);
-            if (protagonist.warping) {
-                protagonist.warping = false;
-                protagonist.warp(mousePos);
-            }
+        if (!protagonist.warping
+            && !(allAsteroids.some(checkAsteroidWarping))) {
+            warp.warpable = true;
         }
+        warp.active = true;
+        warp.place(mousePos);
+        warp.alpha = 1;
+        if (protagonist.warping) {
+            protagonist.warping = false;
+            protagonist.warp(mousePos);
+        }
+        allAsteroids.forEach(function(eachAsteroid) {
+            if (eachAsteroid.warping) {
+                eachAsteroid.warping = false;
+                eachAsteroid.warp(mousePos);
+            }
+        });
     });
+
+    // checks if any asteroids are warping
+    function checkAsteroidWarping(element, index, array) {
+        return element.warping;
+    }
 
     /* This function serves as the kickoff point for the game loop itself
      * and handles properly calling the update and render methods.
@@ -180,6 +191,9 @@ var Engine = (function(global) {
      */
     function updateEntities(dt) {
         protagonist.update();
+        allAsteroids.forEach(function(eachAsteroid) {
+            eachAsteroid.update(dt);
+        });
         if (warp.active) {
             warp.update();
         }
@@ -215,12 +229,18 @@ var Engine = (function(global) {
         /* Loop through all of the objects within the allEnemies array and call
          * the render function you have defined.
          */
-         if (warp.active) {
+        if (warp.active) {
             warp.render();
-         }
-         if (!protagonist.warping) {
-             protagonist.render();
-         }
+        }
+        if (!protagonist.warping) {
+            protagonist.render();
+        }
+        allAsteroids.forEach(function(eachAsteroid) {
+            if (!eachAsteroid.warping) {
+                eachAsteroid.render();
+            }
+        });
+
     }
 
     function playSounds() {
@@ -244,6 +264,7 @@ var Engine = (function(global) {
     Resources.load('img/stars-background.png');
 
     Resources.load('img/asteroid-1.png');
+    Resources.load('img/protagonist/blue-explosion.png');
 
     Resources.load('img/warp-gate-2.png')
 
