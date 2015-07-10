@@ -127,6 +127,8 @@ var allBackgroundImages = [
             }
           ];
 
+keys = [];
+
 var crashFrames = [];
 for (var m = 0; m < 512; m += 128) {
   for (var n = 0; n < 768; n += 256) {
@@ -194,8 +196,7 @@ BackgroundStars.prototype.render = function() {
 BackgroundStars.prototype.panVertical = function(dt) {
 
   // slight lag: velY must be at least 1
-  // ensures protagonist is not warping
-  if (protagonist.velY > 1 && (!protagonist.warping)) {
+  if (protagonist.velY > 1) {
 
     // proximity based parallax
     return (-protagonist.velY * dt * this.proximity);
@@ -205,10 +206,8 @@ BackgroundStars.prototype.panVertical = function(dt) {
 
 // Responds to player input (horizontal)
 BackgroundStars.prototype.panHorizontal = function(dt) {
-  if (!protagonist.warping) {
-    this.velX = -protagonist.velX * dt * this.proximity;
-    this.x += this.velX;
-  }
+  this.velX = -protagonist.velX * dt * this.proximity;
+  this.x += this.velX;
 };
 
 BackgroundStars.prototype.wrap = function() {
@@ -275,7 +274,7 @@ BackgroundObject.prototype.update = function(dt) {
 
 // Responds to player input (vertical) ~ redundant ==> to be optimized
 BackgroundObject.prototype.panVertical = function(dt) {
-  if (protagonist.velY > 1 && (!protagonist.warping)) {
+  if (protagonist.velY > 1) {
     return (-protagonist.velY * dt * this.proximity);
   }
 };
@@ -283,10 +282,8 @@ BackgroundObject.prototype.panVertical = function(dt) {
 
 // Responds to player input (horizontal) ~ also redundant
 BackgroundObject.prototype.panHorizontal = function(dt) {
-  if (!protagonist.warping) {
-    this.velX = -protagonist.velX * dt * this.proximity;
-    this.x += this.velX;
-  }
+  this.velX = -protagonist.velX * dt * this.proximity;
+  this.x += this.velX;
 };
 
 
@@ -327,11 +324,9 @@ BackgroundObject.prototype.spawn = function() {
 // Protagonist constructor
 var Protagonist = function() {
   // default ship orientation = downwards
-  this.sprite = 'img/protagonist/ship-down.png';
+  this.sprite = 'img/protagonist/blue-ship.png';
   // explosion spritesheet
   this.explosionSrc = 'img/protagonist/blue-explosion.png';
-  // sound to be played when player ejects from wormhole
-  this.warpSound = 'audio/wormhole.wav';
   this.width = 48;
   this.height = 42;
   // centers player overhead at the beginning
@@ -340,6 +335,8 @@ var Protagonist = function() {
   // slight residual velocity for in media res effect
   this.velX = 0;
   this.velY = 2;
+  //the angle which the ship is facing
+  this.direction = 3/2 * pi;
   // gradual brakes
   this.deceleration = 0.99;
   // maximum allowed speed
@@ -350,20 +347,13 @@ var Protagonist = function() {
   // if not moving, player drifts up, slower than background
   this.drift = 0.25;
   // state describing player being inside wormhole
-  this.enteredWarp = false;
-  // state describing whole process of warping
-  this.warping = false;
+  this.carrying = false;
   // state describing crash
   this.crashed = false;
 };
 
 // Updates the protagonist instance with every animation request
 Protagonist.prototype.update = function() {
-  // Store sound of entering wormhole
-  var warpingSound = Resources.get('audio/wormhole.wav');
-  // Checks to ensure player is not warping
-  if (!this.warping) {
-    warpingSound.pause();
     // moves according to current velocity
     this.move();
     // default drift upwards
@@ -381,80 +371,27 @@ Protagonist.prototype.update = function() {
     this.orientSprite();
     // makes sure only to check warp entry if gate is warpable
     // prevents rewarping on exit
-    if (warp.warpable) {
-      this.checkWarpEntry();
-    }
-  }
-  else if (this.warping) {
-    // play sound when inside wormhole
-    warpingSound.volume = 0.5;
-    warpingSound.play();
-  }
-  if (this.enteredWarp) {
-    // warp gate fades out of view immediately
-    warp.fade();
-    // if warp gate fades away ==> we are past entry
-    if (warp.alpha < warp.fadeRate) {
-      this.enteredWarp = false;
-    }
-  }
-}
+};
 
 
 // Orients sprite based on velocity of the player
 Protagonist.prototype.orientSprite = function() {
-  if (this.velX > 0.75 && this.velY > 0) {
-    this.sprite = 'img/protagonist/ship-down-right.png';
-  }
-  else if (this.velX < -0.75 && this.velY > 0) {
-    this.sprite = 'img/protagonist/ship-down-left.png';
-  }
-  else {
-    this.sprite = 'img/protagonist/ship-down.png';
-  }
-  if (this.velX > 0.5 && this.velY < 0) {
-    this.sprite = 'img/protagonist/ship-up-right.png';
-  }
-  else if (this.velX < -0.5 && this.velY < 0) {
-    this.sprite = 'img/protagonist/ship-up-left.png';
-  }
-  else if (Math.abs(this.velY) > Math.abs(this.velX) && this.velY < -2) {
-    this.sprite = 'img/protagonist/ship-up.png';
-  }
+
 };
 
 
 // Renders the image of the protagonist
 Protagonist.prototype.render = function() {
+  ctx.save();
+  ctx.translate(this.x + this.width/2, this.y + this.height/2);
+  ctx.rotate(this.direction);
+  ctx.translate(-this.x-this.width/2, -this.y-this.height/2);
   ctx.drawImage(Resources.get(this.sprite),
                 this.x,
                 this.y,
                 this.width,
                 this.height);
-};
-
-
-// Mouse movement
-// moves towards current mousedown location
-// accepts mouse coordinates as input
-Protagonist.prototype.moveTowards = function(input) {
-  // Player center for distance checking
-  var thisCenterX = this.x + this.width/2;
-  var thisCenterY = this.y + this.height/2;
-
-  // calculates x and y distance between player and mousedown
-  var xDist = input.x - thisCenterX;
-  var yDist = input.y - thisCenterY;
-
-  // calculates angle
-  var pathAngle = Math.atan2(yDist, xDist);
-  if (pathAngle < 0) {
-    pathAngle = tau + pathAngle;
-  }
-
-  // declares x and y vectors relative to maxSpeed
-  this.velX = Math.cos(pathAngle) * this.maxSpeed;
-  this.velY = Math.sin(pathAngle) * this.maxSpeed;
+  ctx.restore();
 };
 
 
@@ -517,96 +454,22 @@ Protagonist.prototype.warp = function(input) {
 
 /**********************************************
 
-************ || Warp Gate class || ************
+********** || Tractor Beam class || ***********
 
 **********************************************/
 
-// declares relevant properties of warp gates
-var Warp = function() {
-  this.x = 0;
-  this.y = 0;
-  this.side = 80;
-  this.src = 'img/warp-gate-2.png';
-  this.sound = 'audio/warp.wav';
-  this.active = false;
-  this.warpable = false;
-  this.fading = false;
-  this.angle = 0;
-  this.time = 100;
-  this.shrinkRate = 0.25;
-  this.fadeRate = 0.025;
-  this.alpha = 1;
+// declares relevant properties of tractor beams
+var Tractor = function() {
+
 };
 
 
-// renders warp gate image and rotates image
-Warp.prototype.render = function() {
-  var centerX = this.x + this.side/2;
-  var centerY = this.y + this.side/2;
-  ctx.save();
-  ctx.translate(centerX, centerY);
-  ctx.rotate(this.angle);
-  ctx.translate(-centerX, -centerY);
-  ctx.globalAlpha = this.alpha;
-  ctx.drawImage(Resources.get(this.src),
-                this.x,
-                this.y,
-                this.side,
-                this.side);
-  ctx.restore();
+// renders tractor beam and animates
+Tractor.prototype.render = function() {
 };
 
-Warp.prototype.update = function(dt) {
-  this.rotate();
-  this.disintegrate();
-  if (this.fading) {
-    this.fade();
-  }
+Tractor.prototype.update = function(dt) {
 };
-
-Warp.prototype.disintegrate = function(dt) {
-  if (this.time > this.shrinkRate) {
-    this.time -= this.shrinkRate;
-  }
-  else {
-    this.fade();
-  }
-};
-
-Warp.prototype.fade = function() {
-  if (this.alpha < 0.2) {
-    if (this.warpable) {
-      this.warpable = false;
-    }
-  }
-  if (this.alpha > this.fadeRate) {
-    this.alpha -= this.fadeRate;
-  }
-  else {
-    this.reset();
-  }
-}
-
-Warp.prototype.reset = function() {
-  this.fading = false;
-  this.active = false;
-  this.time = 100;
-  this.alpha = 1;
-};
-
-Warp.prototype.rotate = function() {
-  if (this.angle < tau) {
-    this.angle += tau * dt;
-  }
-  else {
-    this.angle = 0;
-  }
-};
-
-Warp.prototype.place = function(input) {
-  this.x = input.x - this.side/2;
-  this.y = input.y - this.side/2;
-}
 
 
 /**********************************************

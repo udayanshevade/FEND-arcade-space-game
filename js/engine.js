@@ -37,69 +37,7 @@ var Engine = (function(global) {
     ***** This code handles mouse tracking, player movement and warp placing.
     *****/
 
-    // Declare variable to store object containing mouse coordinates
-    var mousePos = null;
 
-    // Returns object with mouse (x, y) values relative to the canvas
-    function getMousePos(canvas, evt) {
-        var rect = canvas.getBoundingClientRect();
-        return {
-            x: evt.clientX - rect.left,
-            y: evt.clientY - rect.top
-        };
-    }
-
-    // Assigns new returned mouse position object to variable mousePos
-    canvas.addEventListener('mousemove', function(evt) {
-        mousePos = getMousePos(canvas, evt);
-    });
-
-    // Declare interval variable for determining how long mousedown happens
-    var clickInterval = null;
-
-    // Listens for mousedown and sets interval to duration of click
-    canvas.addEventListener('mousedown', function(e) {
-        clickInterval = setInterval(function(){
-            /* Calls player movement function to each new mousePos
-            * for fluid movement. Improves game feel.
-            */
-            protagonist.moveTowards(mousePos);
-        }, 100);
-    });
-
-    // Mouseup clears interval and sets it back to null for next use
-    doc.addEventListener('mouseup', function(e) {
-        if (clickInterval) {
-            clearInterval(clickInterval);
-            clickInterval = null;
-        }
-    });
-
-    // Listens for double click to place warp gate
-    canvas.addEventListener('dblclick', function(e) {
-        if (!protagonist.warping
-            && !(allAsteroids.some(checkAsteroidWarping))) {
-            warp.warpable = true;
-        }
-        warp.active = true;
-        warp.place(mousePos);
-        warp.alpha = 1;
-        if (protagonist.warping) {
-            protagonist.warping = false;
-            protagonist.warp(mousePos);
-        }
-        allAsteroids.forEach(function(eachAsteroid) {
-            if (eachAsteroid.warping) {
-                eachAsteroid.warping = false;
-                eachAsteroid.warp(mousePos);
-            }
-        });
-    });
-
-    // checks if any asteroids are warping
-    function checkAsteroidWarping(element, index, array) {
-        return element.warping;
-    }
 
     /* This function serves as the kickoff point for the game loop itself
      * and handles properly calling the update and render methods.
@@ -194,9 +132,6 @@ var Engine = (function(global) {
         allAsteroids.forEach(function(eachAsteroid) {
             eachAsteroid.update(dt);
         });
-        if (warp.active) {
-            warp.update();
-        }
     }
 
     /* This function initially draws the "game level", it will then call
@@ -229,16 +164,9 @@ var Engine = (function(global) {
         /* Loop through all of the objects within the allEnemies array and call
          * the render function you have defined.
          */
-        if (warp.active) {
-            warp.render();
-        }
-        if (!protagonist.warping) {
-            protagonist.render();
-        }
+        protagonist.render();
         allAsteroids.forEach(function(eachAsteroid) {
-            if (!eachAsteroid.warping) {
-                eachAsteroid.render();
-            }
+            eachAsteroid.render();
         });
 
     }
@@ -266,14 +194,10 @@ var Engine = (function(global) {
     Resources.load('img/asteroid-1.png');
     Resources.load('img/protagonist/blue-explosion.png');
 
-    Resources.load('img/warp-gate-2.png')
+    Resources.load(['img/tractor-free.png',
+                    'img/tractor-locked.png']);
 
-    Resources.load(['img/protagonist/ship-down.png',
-                    'img/protagonist/ship-up.png',
-                    'img/protagonist/ship-up-left.png',
-                    'img/protagonist/ship-up-right.png',
-                    'img/protagonist/ship-down-left.png',
-                    'img/protagonist/ship-down-right.png']);
+    Resources.load(['img/protagonist/blueship.png']);
 
     Resources.load(['img/hurricane-nebula.png',
                   'img/filings-nebula.png',
@@ -292,9 +216,7 @@ var Engine = (function(global) {
     Now load all the sounds that will be used for the game.
     */
 
-    Resources.loadAudio(['audio/warp.wav',
-                        'audio/wormhole.wav',
-                        'audio/space-ambience.wav',
+    Resources.loadAudio(['audio/space-ambience.wav',
                         'audio/space-bass.wav']);
     Resources.onReady(init);
 
