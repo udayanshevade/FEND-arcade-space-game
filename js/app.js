@@ -332,8 +332,8 @@ var Protagonist = function() {
   this.explosionSrc = 'img/protagonist/blue-explosion.png';
   // sound to be played when player ejects from wormhole
   this.warpSound = 'audio/wormhole.wav';
-  this.width = 72;
-  this.height = 63;
+  this.width = 48;
+  this.height = 42;
   // centers player overhead at the beginning
   this.x = canvasWidth/2 - this.width/2;
   this.y = 30;
@@ -453,12 +453,8 @@ Protagonist.prototype.moveTowards = function(input) {
   }
 
   // declares x and y vectors relative to maxSpeed
-  if (Math.abs(xDist) > 50) {
-    this.velX = Math.cos(pathAngle) * this.maxSpeed;
-  }
-  if (Math.abs(yDist) > 50) {
-    this.velY = Math.sin(pathAngle) * this.maxSpeed;
-  }
+  this.velX = Math.cos(pathAngle) * this.maxSpeed;
+  this.velY = Math.sin(pathAngle) * this.maxSpeed;
 };
 
 
@@ -626,7 +622,9 @@ var Asteroid = function() {
   this.y = canvasHeight;
   this.angle = Math.random() * tau;
   this.src = 'img/asteroid-1.png';
+  this.maxVelX = 5;
   this.maxVelY = -20;
+  this.velX = -this.maxVelX + Math.random() * this.maxVelX * 2;
   this.velY = Math.random() * this.maxVelY;
   this.acceleration = 1.008;
   this.rotationRate = Math.random() * 0.25;
@@ -643,7 +641,9 @@ Asteroid.prototype.update = function(dt) {
     // resets if asteroid moves out of bounds
     this.checkBounds();
     // checks if asteroid has crashed into player
-    this.checkCrash();
+    if (!protagonist.warping) {
+      this.checkCrash();
+    }
     // makes sure only to check warp entry if gate is warpable
     // prevents rewarping on exit
     if (warp.warpable) {
@@ -820,7 +820,7 @@ allBackgroundImages.forEach(function(bgObj) {
 
 
 // For asteroid objects
-var maxAsteroids = 1;
+var maxAsteroids = 5;
 var allAsteroids = [];
 
 for (var asteroidIndex = 0; asteroidIndex < maxAsteroids; asteroidIndex++) {
