@@ -143,11 +143,12 @@ Home.prototype.panHorizontal = function() {
 var Station = function() {
   this.src = 'img/station.png';
   this.size = 350;
-  this.x = canvasWidth/2 + this.size/2;
-  this.y = home.size * 0.75;
-  this.panSpeed = 12;
+  this.x = canvasWidth/2 + this.size/10;
+  this.y = home.size * 0.4;
+  this.panSpeed = 15;
   this.rotationRate = 0.0005;
   this.angle = 0;
+  this.score = 0;
 }
 
 Station.prototype.render = function() {
@@ -192,6 +193,11 @@ Station.prototype.rotate = function() {
   }
 };
 
+// updates score
+Station.prototype.updateScore = function(amount) {
+  this.score += Math.floor(amount/45);
+};
+
 /*********************************************
 
 ********** || Protagonist class || ***********
@@ -213,13 +219,13 @@ var Protagonist = function() {
   // angle which the ship is accelerating
   this.bearing = this.direction;
   // slight residual velocity for in media res effect
-  this.velocity = 1;
+  this.velUnit = 0.05;
   this.velX = 0;
-  this.velY = 0;
+  this.velY = 0.08;
   // gradual brakes
   this.deceleration = 0.1;
   // maximum allowed speed
-  this.maxSpeed = 3;
+  this.maxSpeed = 2;
   // keeps track of how long protagonist has traveled since reset
   this.traveled = 0;
   this.objectReset = 0;
@@ -232,11 +238,8 @@ var Protagonist = function() {
 
 // Updates the protagonist instance with every animation request
 Protagonist.prototype.update = function() {
-  console.log(this.weight);
   // takes in key input
   this.handleInput();
-  // moves according to current velocity
-  this.move();
 };
 
 
@@ -256,36 +259,48 @@ Protagonist.prototype.render = function() {
 
 
 // Controls overall player motion
-Protagonist.prototype.move = function() {
-  this.velX = this.velocity * Math.sin(this.bearing) * 0.2 / this.weight;
-  this.velY = -this.velocity * Math.cos(this.bearing) * 0.2 / this.weight;
-}
+Protagonist.prototype.move = function(direction) {
+  if (direction === 'forwards') {
+    var orientation = 1;
+  }
+  if (direction === 'backwards') {
+    var orientation = -1;
+  }
+  this.velX += this.velUnit * Math.sin(this.bearing)
+                * 0.2 * orientation / this.weight;
+  this.velY += -this.velUnit * Math.cos(this.bearing)
+                * 0.2 * orientation / this.weight;
+};
 
 
 Protagonist.prototype.handleInput = function() {
   // accelerate (up or w)
   if (keys[87] || keys[38]) {
     // if velocity is lower than maximum
-    if (this.velocity < this.maxSpeed) {
+    if (Math.abs(this.velX) < this.maxSpeed ||
+        Math.abs(this.velY) < this.maxSpeed) {
       // reset velocity for quick transition
       // add increment to speed
-      this.velocity += 0.1;
+      this.move('forwards');
     }
     // if ship rotation has changed
     if (this.bearing != this.direction) {
       // accelerate in that new direction
       this.bearing = this.direction;
-      this.velocity /= 2;
+      this.velX /= 1.05;
+      this.velY /= 1.05;
     }
   }
   // reverse (down or s)
   if (keys[83] || keys[40]) {
-    if (this.velocity > -this.maxSpeed) {
-      this.velocity -= 0.1;
+    if (Math.abs(this.velX) < this.maxSpeed ||
+        Math.abs(this.velY) < this.maxSpeed) {
+      this.move('backwards');
     }
     if (this.bearing != this.direction) {
       this.bearing = this.direction;
-      this.velocity /= 2;
+      this.velX /= 1.05;
+      this.velY /= 1.05;
     }
   }
   // rotate right (right or d)
@@ -417,14 +432,14 @@ var Asteroid = function(x, y, vel, size) {
   this.size = size;
   this.x = x;
   this.y = y;
-  this.vel = vel;
+  this.driftVel = vel;
   this.angle = Math.random() * tau;
   this.src = 'img/asteroid-1.png';
   this.rotationRate = Math.random() * 0.0025;
   this.inView = false;
   this.insideTractor = false;
   this.tracting = false;
-  this.panSpeed = 12;
+  this.panSpeed = 20;
   this.weight = Math.floor(this.size/45) * 2;
 }
 
@@ -444,6 +459,7 @@ Asteroid.prototype.update = function() {
     if (tractor.tractorOn) {
       this.checkTractorEntry();
     }
+    this.checkStorage();
   }
   else {
     this.lug();
@@ -584,10 +600,23 @@ Asteroid.prototype.panHorizontal = function() {
 
 // updates score if asteroid inside station bounds
 Asteroid.prototype.checkStorage = function() {
-  if (this.x < station.x + station.size) {
-
+  if (this.x > station.x && this.x < station.x + station.size
+      && this.y > station.y && this.y < station.y + station.size
+      && !this.tracting) {
+    station.updateScore(this.size);
+    this.reset();
   }
 };
+
+
+Asteroid.prototype.reset = function() {
+  this.x = Math.random() * (10000) * protagonist.score
+            - (10000 * protagonist.score);
+  this.y = Math.random() * (10000) * protagonist.score
+            - (10000 * protagonist.score);
+  this.driftVel = 1;
+};
+
 
 
 /*****
@@ -643,8 +672,9 @@ document.addEventListener('keyup', function(e) {
 
 document.addEventListener('keypress', function(e) {
   if (e.keyCode === 32) {
-    console.log(allAsteroids);
-    protagonist.carrying = !protagonist.carrying;
+    if (protagonist.carrying) {
+      protagonist.carrying = !protagonist.carrying;
+    }
     tractor.tractorOn = !tractor.tractorOn;
     if (tractor.tracting) {
       tractor.tracting = !tractor.tracting;
