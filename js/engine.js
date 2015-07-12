@@ -23,6 +23,8 @@ var Engine = (function(global) {
         win = global.window,
         canvas = doc.createElement('canvas'),
         ctx = canvas.getContext('2d'),
+        fps = 60,
+        interval = 1000/fps,
         gameState = 'Playing',
         lastTime;
 
@@ -33,16 +35,24 @@ var Engine = (function(global) {
     canvas.height = 600;
 
 
-    /*****
-    ***** This code handles mouse tracking, player movement and warp placing.
-    *****/
-
+    function checkBounds(thing) {
+        if (thing.x > -thing.size && thing.x < canvasWidth + thing.size
+            && thing.y > -thing.size && thing.y < canvasHeight + thing.size) {
+            return true;
+        }
+    }
 
 
     /* This function serves as the kickoff point for the game loop itself
      * and handles properly calling the update and render methods.
      */
     function main() {
+
+        /* Use the browser's requestAnimationFrame function to call this
+         * function again as soon as the browser is able to draw another frame.
+         */
+        win.requestAnimationFrame(main);
+
         /* Get our time delta information which is required if your game
          * requires smooth animation. Because everyone's computer processes
          * instructions at different speeds we need a constant value that
@@ -50,29 +60,30 @@ var Engine = (function(global) {
          * computer is) - hurray time!
          */
         var now = Date.now(),
-            dt = (now - lastTime) / 1000.0;
+            dt = (now - lastTime);
 
         global.now = now;
         global.dt = dt;
-
-        /* Call our update/render functions, pass along the time delta to
-         * our update function since it may be used for smooth animation.
-         */
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        update(dt);
-        render();
-        playSounds();
 
         /* Set our lastTime variable which is used to determine the time delta
          * for the next time this function is called.
          */
         lastTime = now;
 
-        /* Use the browser's requestAnimationFrame function to call this
-         * function again as soon as the browser is able to draw another frame.
+        if (dt > interval) {
+            lastTime = now - (dt % interval);
+        }
+
+        /* Call our update/render functions, pass along the time delta to
+         * our update function since it may be used for smooth animation.
          */
-        win.requestAnimationFrame(main);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        update();
+        render();
+        playSounds();
+
+
     };
 
     /* This function does some initial setup that should only occur once,
@@ -94,30 +105,17 @@ var Engine = (function(global) {
      * functionality this way (you could just implement collision detection
      * on the entities themselves within your app.js file).
      */
-    function update(dt) {
-        updateLayers(dt);
-        updateEntities(dt);
+    function update() {
+        updateLayers();
+        updateEntities();
     }
 
-    var backgroundObject;
-
-    function updateLayers(dt) {
+    function updateLayers() {
         starQuadrants.forEach(function(quadrant){
-            quadrant.update(dt);
+            quadrant.update();
         });
-        bgObjectPassing = allBackgroundObjects.some(checkBackgroundObject);
-        if (protagonist.traveled % 20000 === 0 && !bgObjectPassing) {
-            var objectIndex = Math.floor(Math.random() * allBackgroundObjects.length);
-            backgroundObject = allBackgroundObjects[objectIndex];
-            backgroundObject.spawn();
-        }
-        if (backgroundObject) {
-            backgroundObject.update(dt);
-        }
-    }
-
-    function checkBackgroundObject(element, index, array) {
-        return (element.passing);
+        home.update();
+        station.update();
     }
 
     /* This is called by the update function  and loops through all of the
@@ -127,10 +125,11 @@ var Engine = (function(global) {
      * the data/properties related to  the object. Do your drawing in your
      * render methods.
      */
-    function updateEntities(dt) {
+    function updateEntities() {
         protagonist.update();
+        tractor.update();
         allAsteroids.forEach(function(eachAsteroid) {
-            eachAsteroid.update(dt);
+            eachAsteroid.update();
         });
     }
 
@@ -149,11 +148,12 @@ var Engine = (function(global) {
         starQuadrants.forEach(function(quadrant){
             quadrant.render();
         });
-        allBackgroundObjects.forEach(function(bgObj) {
-            if (bgObj.passing) {
-                bgObj.render();
-            }
-        });
+        if (checkBounds(home)) {
+            home.render();
+        }
+        if (checkBounds(station)) {
+            station.render();
+        }
     }
 
     /* This function is called by the render function and is called on each game
@@ -165,10 +165,10 @@ var Engine = (function(global) {
          * the render function you have defined.
          */
         protagonist.render();
+        tractor.render();
         allAsteroids.forEach(function(eachAsteroid) {
             eachAsteroid.render();
         });
-
     }
 
     function playSounds() {
@@ -190,27 +190,18 @@ var Engine = (function(global) {
      * all of these images are properly loaded our game will start.
      */
     Resources.load('img/stars-background.png');
+    Resources.load('img/planet2.png');
+    Resources.load('img/station.png');
 
     Resources.load('img/asteroid-1.png');
     Resources.load('img/protagonist/blue-explosion.png');
 
-    Resources.load(['img/tractor-free.png',
-                    'img/tractor-locked.png']);
+    Resources.load(['img/warp-cursor.png',
+                    'img/protagonist/tractor-free.png',
+                    'img/protagonist/tractor-locked.png']);
 
-    Resources.load(['img/protagonist/blueship.png']);
+    Resources.load(['img/protagonist/ship.png']);
 
-    Resources.load(['img/hurricane-nebula.png',
-                  'img/filings-nebula.png',
-                  'img/brown-nebula.png',
-                  'img/red-black-nebula.png',
-                  'img/planet1.png',
-                  'img/planet2.png',
-                  'img/mottled-sun.png',
-                  'img/galactic.png',
-                  'img/space-cluster.png',
-                  'img/gibbous-planet.png',
-                  'img/star-crescent-planet.png',
-                  'img/asteroid-field-1.png'])
 
     /*
     Now load all the sounds that will be used for the game.
