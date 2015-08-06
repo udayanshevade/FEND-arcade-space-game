@@ -143,12 +143,12 @@ Home.prototype.panHorizontal = function() {
 var Station = function() {
   this.src = 'img/station.png';
   this.size = 350;
-  this.x = canvasWidth/2 + this.size/10;
+  this.x = 2 * canvasWidth/5;
   this.y = home.size * 0.4;
   this.panSpeed = 15;
   this.rotationRate = 0.0005;
   this.angle = 0;
-  this.score = 0;
+  this.score = 1;
 }
 
 Station.prototype.render = function() {
@@ -209,7 +209,7 @@ var Protagonist = function() {
   // default ship orientation = downwards
   this.sprite = 'img/protagonist/ship.png';
   // explosion spritesheet
-  this.explosionSrc = 'img/protagonist/blue-explosion.png';
+  this.explosionSrc = 'img/explosion.png';
   this.size = 70;
   // centers player overhead at the beginning
   this.x = canvasWidth/2 - this.size/2;
@@ -219,13 +219,15 @@ var Protagonist = function() {
   // angle which the ship is accelerating
   this.bearing = this.direction;
   // slight residual velocity for in media res effect
-  this.velUnit = 0.05;
+  this.velUnit = 0.01;
   this.velX = 0;
   this.velY = 0.08;
   // gradual brakes
   this.deceleration = 0.1;
+  // indicates whether moving deliberately
+  this.accelerating = false;
   // maximum allowed speed
-  this.maxSpeed = 2;
+  this.maxSpeed = 0.6;
   // keeps track of how long protagonist has traveled since reset
   this.traveled = 0;
   this.objectReset = 0;
@@ -234,12 +236,18 @@ var Protagonist = function() {
   // state describing crash
   this.crashed = false;
   this.weight = 1;
+  // keeps track of shield status
+  this.exposed = false;
 };
 
 // Updates the protagonist instance with every animation request
 Protagonist.prototype.update = function() {
   // takes in key input
   this.handleInput();
+  // keeps player within camera bounds
+  this.checkViewBounds();
+  // view reacts to movement
+  //this.lerp();
 };
 
 
@@ -261,21 +269,21 @@ Protagonist.prototype.render = function() {
 // Controls overall player motion
 Protagonist.prototype.move = function(direction) {
   if (direction === 'forwards') {
-    var orientation = 1;
+    var oriented = 1;
   }
   if (direction === 'backwards') {
-    var orientation = -1;
+    var oriented = -1;
   }
   this.velX += this.velUnit * Math.sin(this.bearing)
-                * 0.2 * orientation / this.weight;
+                * 0.2 * oriented;
   this.velY += -this.velUnit * Math.cos(this.bearing)
-                * 0.2 * orientation / this.weight;
+                * 0.2 * oriented;
 };
 
 
 Protagonist.prototype.handleInput = function() {
-  // accelerate (up or w)
-  if (keys[87] || keys[38]) {
+  // accelerate (w)
+  if (keys[87]) {
     // if velocity is lower than maximum
     if (Math.abs(this.velX) < this.maxSpeed ||
         Math.abs(this.velY) < this.maxSpeed) {
@@ -291,8 +299,8 @@ Protagonist.prototype.handleInput = function() {
       this.velY /= 1.05;
     }
   }
-  // reverse (down or s)
-  if (keys[83] || keys[40]) {
+  // reverse (s)
+  if (keys[83]) {
     if (Math.abs(this.velX) < this.maxSpeed ||
         Math.abs(this.velY) < this.maxSpeed) {
       this.move('backwards');
@@ -303,26 +311,158 @@ Protagonist.prototype.handleInput = function() {
       this.velY /= 1.05;
     }
   }
-  // rotate right (right or d)
-  if (keys[68] || keys[39]) {
+  // rotate right (right)
+  if (keys[39]) {
     // if direction angle less than tau
     if (this.direction < tau) {
       // add incremental angle
-      this.direction += 0.1;
+      this.direction += 0.05;
     }
     else {
       // reset angle to 0
       this.direction = 0;
     }
   }
-  // rotate left (left or a)
-  if (keys[65] || keys[37]) {
+  // rotate left (left)
+  if (keys[37]) {
     if (this.direction > 0) {
-      this.direction -= 0.1;
+      this.direction -= 0.05;
     }
     else {
       this.direction = tau;
     }
+  }
+};
+
+
+// ensures player stays within movement window
+Protagonist.prototype.checkViewBounds = function() {
+  if (this.x + this.size > canvasWidth * 0.75) {
+    this.x = canvasWidth * 0.75 - this.size;
+  }
+  if (this.x < canvasWidth/4) {
+    this.x = canvasWidth/4;
+  }
+  if (this.y + this.size > canvasHeight * 0.75) {
+    this.y = canvasHeight * 0.75 - this.size;
+  }
+  if (this.y < canvasHeight/4) {
+    this.y = canvasHeight/4;
+  }
+};
+
+// viewport reflects player movement
+Protagonist.prototype.lerp = function() {
+  var screenCenterX = canvasWidth/2 - this.size/2;
+  var screenCenterY = canvasHeight/2 - this.size/2;
+  if (this.accelerating) {
+    this.x -= this.velX;
+    this.y -= this.velY;
+  }
+  if (!this.accelerating) {
+    if (this.x < screenCenterX) {
+      this.x += Math.abs(this.velX);
+    }
+    if (this.x > screenCenterX) {
+      this.x -= Math.abs(this.velX);
+    }
+    if (this.y < screenCenterY) {
+      this.y += Math.abs(this.velY);
+    }
+    if (this.y < screenCenterY) {
+      this.y -= Math.abs(this.velY);
+    }
+  };
+};
+
+/**********************************************
+
+********** || GPS Guidance class || ***********
+
+**********************************************/
+
+var Guidance = function() {
+  this.color = 'green';
+  this.alpha = 0;
+  this.maxAlpha = 0.4;
+  this.active = true;
+}
+
+Guidance.prototype.update = function() {
+  this.fade();
+};
+
+Guidance.prototype.render = function() {
+  if (guidance.active) {
+    ctx.save();
+    ctx.globalAlpha = this.alpha;
+    ctx.beginPath();
+    ctx.moveTo(station.x + station.size/2, station.y + station.size/2);
+    ctx.lineTo(protagonist.x + protagonist.size/2,
+                protagonist.y + protagonist.size/2);
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.closePath();
+    ctx.restore();
+  }
+};
+
+Guidance.prototype.fade = function() {
+  if (this.active && station.visible && this.alpha > 0) {
+    this.alpha -= 0.006;
+  }
+  else if (!station.visible && this.alpha < this.maxAlpha) {
+    this.alpha += 0.006;
+  }
+};
+
+/**********************************************
+
+************* || Shield class || **************
+
+**********************************************/
+
+var Shield = function() {
+  this.width = 145;
+  this.height = 140;
+  this.explosionSrc = 'img/protagonist/blue-explosion.png';
+  this.srcs = ['img/protagonist/shield3.png',
+              'img/protagonist/shield2.png',
+              'img/protagonist/shield1.png'];
+  this.srcIndex = 0;
+  this.x = protagonist.x + protagonist.size/2 - this.width/2;
+  this.y = protagonist.y + protagonist.size/2 - this.height/2;
+  this.hitCount = 0;
+};
+
+Shield.prototype.render = function() {
+  if (!protagonist.exposed) {
+    ctx.save();
+    this.globalAlpha = 0.5;
+    ctx.translate(this.x + this.width/2, this.y + this.height/2);
+    ctx.rotate(protagonist.direction);
+    ctx.translate(-this.x - this.width/2, -this.y - this.height/2);
+    ctx.drawImage(Resources.get(this.srcs[this.srcIndex]),
+                  this.x,
+                  this.y,
+                  this.width,
+                  this.height);
+    ctx.restore();
+  }
+};
+
+Shield.prototype.update = function() {
+  this.changeMode();
+};
+
+
+Shield.prototype.changeMode = function() {
+  if (this.hitCount < 2) {
+    this.srcIndex = this.hitCount;
+  }
+  else {
+    protagonist.exposed = true;
   }
 };
 
@@ -340,7 +480,9 @@ var Tractor = function() {
               'img/protagonist/tractor-free.png',
               'img/protagonist/tractor-locked.png'];
   this.srcIndex = 0;
-  this.attractCount = 0;
+  this.animateIndex = 0;
+  this.load = 0;
+  this.maxLoad = 1;
   this.sy = this.size;
   this.x = protagonist.x + protagonist.size/2 - this.size/2;
   this.y = protagonist.y + protagonist.size/2 - this.size/2;
@@ -401,15 +543,15 @@ Tractor.prototype.changeMode = function() {
 
 // Animates tractor and turns it off
 Tractor.prototype.attract = function() {
-  if (this.tractorOn) {
+  if (this.tractorOn && !protagonist.crashing) {
     if (this.sy < this.size) {
       this.sy++;
     }
     else if (!this.tracting && this.sy >= this.size) {
       this.sy = 0;
-      this.attractCount++;
-      if (this.attractCount > 3) {
-        this.attractCount = 0;
+      this.animateIndex++;
+      if (this.animateIndex > 3) {
+        this.animateIndex = 0;
         this.sy = this.size;
         this.srcIndex = 0;
         this.tractorOn = false;
@@ -434,35 +576,60 @@ var Asteroid = function(x, y, vel, size) {
   this.y = y;
   this.driftVel = vel;
   this.angle = Math.random() * tau;
+  this.explosionSrc = shield.explosionSrc;
   this.src = 'img/asteroid-1.png';
   this.rotationRate = Math.random() * 0.0025;
   this.inView = false;
   this.insideTractor = false;
+  this.tracted = false;
   this.tracting = false;
   this.panSpeed = 20;
-  this.weight = Math.floor(this.size/45) * 2;
+  this.weight = 1 + Math.floor(this.size/45);
 }
+
+// renders asteroid image and rotates image
+Asteroid.prototype.render = function() {
+  if (!this.crashing) {
+    var centerX = this.x + this.size/2;
+    var centerY = this.y + this.size/2;
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.rotate(this.angle);
+    ctx.translate(-centerX, -centerY);
+    ctx.drawImage(Resources.get(this.src),
+                  this.x,
+                  this.y,
+                  this.size,
+                  this.size);
+    ctx.restore();
+  }
+  else {
+    if (protagonist.exposed) {
+      this.explosionSrc = protagonist.explosionSrc;
+    }
+    this.animateCrash(this.x, this.y);
+  }
+};
 
 // updates asteroid properties
 Asteroid.prototype.update = function() {
   if (!this.tracting) {
-    // moves according to randomly generated velocity
-    this.drift();
     // responds to player movement
     this.panVertical();
     this.panHorizontal();
-    // checks if asteroid moves into of bounds
-    this.checkBounds();
     // checks if asteroid has crashed into player
     this.checkCrash();
     // checks if tractor has latched on
     if (tractor.tractorOn) {
       this.checkTractorEntry();
     }
-    this.checkStorage();
+    this.checkDropOff();
+    this.checkRelease();
   }
   else {
-    this.lug();
+    if (tractor.load === 1) {
+      this.lug();
+    }
   }
   // rotates
   this.rotate();
@@ -480,13 +647,16 @@ Asteroid.prototype.checkCrash = function() {
   var yDist = Math.abs(thisCenterY - protagonistCenterY);
   if (xDist < halfShipWidth && yDist < halfShipHeight) {
     this.crashing = true;
+    if (protagonist.exposed) {
+      protagonist.crashed = true;
+    }
   }
 };
 
 Asteroid.prototype.animateCrash = function(x, y) {
   var sx = crashFrames[crashFrameIndex].sx;
   var sy = crashFrames[crashFrameIndex].sy;
-  ctx.drawImage(Resources.get(protagonist.explosionSrc),
+  ctx.drawImage(Resources.get(this.explosionSrc),
                 sx,
                 sy,
                 256,
@@ -501,34 +671,11 @@ Asteroid.prototype.animateCrash = function(x, y) {
   else {
     crashFrameIndex = 0;
     this.crashing = false;
-  }
-};
-
-// renders asteroid image and rotates image
-Asteroid.prototype.render = function() {
-  if (this.inView) {
-    if (!this.crashing) {
-      var centerX = this.x + this.size/2;
-      var centerY = this.y + this.size/2;
-      ctx.save();
-      ctx.translate(centerX, centerY);
-      ctx.rotate(this.angle);
-      ctx.translate(-centerX, -centerY);
-      ctx.drawImage(Resources.get(this.src),
-                    this.x,
-                    this.y,
-                    this.size,
-                    this.size);
-      ctx.restore();
+    if (shield.hitCount >= 0) {
+      shield.hitCount++;
     }
-    else {
-      this.animateCrash(this.x, this.y);
-    }
+    this.reset();
   }
-};
-
-// controls asteroid motion
-Asteroid.prototype.drift = function() {
 };
 
 // lugs asteroids along player
@@ -550,38 +697,30 @@ Asteroid.prototype.rotate = function() {
   }
 };
 
-// checks when asteroid travels out visible bounds
-Asteroid.prototype.checkBounds = function() {
-  if (this.x + this.size > 0
-    && this.x < canvasWidth
-    && this.y + this.size > 0
-    && this.y < canvasHeight) {
-    this.inView = true;
-  }
-  else {
-    this.inView = false;
-  }
-};
 
-
-// checks if asteroid is inside warp gate
+// checks if asteroid is inside tractor
 Asteroid.prototype.checkTractorEntry = function() {
-  var halfTractorWidth = tractor.size/2;
-  var halfTractorHeight = tractor.sy/2;
-  // recalculates center as player position changes
-  var thisCenterX = this.x + this.size/2;
-  var thisCenterY = this.y + this.size/2;
-  var tractorCenterX = tractor.x + halfTractorWidth;
-  var tractorCenterY = tractor.y + halfTractorHeight;
-  var xDist = Math.abs(thisCenterX - tractorCenterX);
-  var yDist = Math.abs(thisCenterY - tractorCenterY);
-  if (xDist < halfTractorWidth && yDist < halfTractorHeight) {
-    if (!this.insideTractor) {
-      protagonist.weight += this.weight;
+  if (tractor.load < 1) {
+    var halfTractorWidth = tractor.size/2;
+    var halfTractorHeight = tractor.sy/2;
+    // recalculates center as player position changes
+    var thisCenterX = this.x + this.size/2;
+    var thisCenterY = this.y + this.size/2;
+    var tractorCenterX = tractor.x + halfTractorWidth;
+    var tractorCenterY = tractor.y + halfTractorHeight;
+    var xDist = Math.abs(thisCenterX - tractorCenterX);
+    var yDist = Math.abs(thisCenterY - tractorCenterY);
+    if (xDist < halfTractorWidth && yDist < halfTractorHeight) {
+      if (!this.insideTractor) {
+        protagonist.weight += this.weight;
+        protagonist.maxSpeed /= this.weight;
+        tractor.load++;
+        this.tracting = true;
+        this.insideTractor = true;
+        tractor.tracting = true;
+        this.tracted = true;
+      }
     }
-    this.tracting = true;
-    this.insideTractor = true;
-    tractor.tracting = true;
   }
 };
 
@@ -599,39 +738,113 @@ Asteroid.prototype.panHorizontal = function() {
 };
 
 // updates score if asteroid inside station bounds
-Asteroid.prototype.checkStorage = function() {
+Asteroid.prototype.checkDropOff = function() {
   if (this.x > station.x && this.x < station.x + station.size
       && this.y > station.y && this.y < station.y + station.size
-      && !this.tracting) {
+      && !this.tracting && this.tracted) {
     station.updateScore(this.size);
     this.reset();
+    this.tracted = false;
+    this.insideTractor = false;
+    tractor.load--;
+  }
+};
+
+//
+Asteroid.prototype.checkRelease = function() {
+  if (!this.tracting && this.tracted) {
+    this.tracted = false;
+    this.insideTractor = false;
+    tractor.load--;
   }
 };
 
 
 Asteroid.prototype.reset = function() {
-  this.x = Math.random() * (10000) * protagonist.score
-            - (10000 * protagonist.score);
-  this.y = Math.random() * (10000) * protagonist.score
-            - (10000 * protagonist.score);
-  this.driftVel = 1;
+  var newAngle = Math.random() * tau;
+  this.x = home.x + home.size/2 + (5 * canvasWidth * Math.random() * Math.sin(newAngle)) * station.score;
+  this.y = home.y + home.size/2 + 5 * (canvasHeight * Math.random() * Math.cos(newAngle)) * station.score;
+  this.driftVel = Math.random() * 0.1;
+  this.explosionSrc = shield.explosionSrc;
 };
 
+
+/**********************************************
+
+************** || Text class || ***************
+
+**********************************************/
+
+var GameText = function(text, size, x, y) {
+  this.font = size + ' Future';
+  this.x = x;
+  this.y = y;
+  this.text = text;
+  this.alpha = 1;
+  this.fadeRate = -0.0025;
+  this.displaying = false;
+};
+
+// renders text
+GameText.prototype.render = function() {
+  if (this.displaying) {
+    ctx.save();
+    ctx.font = this.font;
+    ctx.fillStyle = 'white';
+    ctx.globalAlpha = this.alpha;
+    ctx.fillText(this.text, this.x, this.y);
+    ctx.restore();
+  }
+};
+
+// updates game text changes
+GameText.prototype.update = function() {
+  if (this.displaying) {
+    this.fade();
+  }
+}
+
+// fades out of view
+GameText.prototype.fade = function() {
+  this.alpha += this.fadeRate;
+  if (this.alpha <= -this.fadeRate * 5) {
+    this.displaying = false;
+  }
+};
 
 
 /*****
   Instantiate all classes
 *****/
 
-protagonist = new Protagonist();
+// player object
+var protagonist = new Protagonist();
 
-tractor = new Tractor();
+// tractor beam object
+var tractor = new Tractor();
 
-home = new Home();
+// shield object
+var shield = new Shield();
 
-station = new Station();
+// planet object
+var home = new Home();
 
-// For background star tile objects
+// station object
+var station = new Station();
+
+// GPS guidance object
+var guidance = new Guidance();
+
+var yPosition = canvasHeight/3;
+
+// message objects
+var welcomeMessage = 'Tow the asteroids back to the mining station.';
+var welcomeText = new GameText(welcomeMessage, '20px', canvasWidth/6.5, yPosition);
+var resetMessage = 'Do not fail us like the last one.';
+var resetText = new GameText(resetMessage, '20px', 2 * canvasWidth/5, yPosition);
+
+
+// background star tile objects
 var starQuadrants = [];
 var starQuadIndex = 0;
 
@@ -642,34 +855,45 @@ for (var w = -512; w < canvasWidth + 512; w += 512) {
   }
 }
 
-maxAsteroids = 1;
+// asteroid objects
+maxAsteroids = 100;
 var allAsteroids = [];
 
 for (var asteroidIndex = 0; asteroidIndex < maxAsteroids; asteroidIndex++) {
-  var newX = Math.random() * canvasWidth;
-  var newY = canvasHeight * 2;
+  // spawns at an angle relative to home planet
+  var newAngle = Math.random() * tau;
+  var newX = home.x + home.size/2 + 5 * canvasWidth * Math.random() * Math.sin(newAngle);
+  var newY = home.y + home.size/2 + 5 * canvasHeight * Math.random() * Math.cos(newAngle);
   var newVel = 0;
-  var newSize = 45;
+  var newSize = Math.ceil(Math.random() * 45 * 2);
+  // creates asteroid object and places in allAsteroids array
   allAsteroids[asteroidIndex] = new Asteroid(newX, newY, newVel, newSize);
 }
 
 
 /*****
-***** This code handles player movement.
+***** This code handles player movement and input.
 *****/
 
+// forward/backward/rotation
+// tracks keycode for fluid motion
 document.addEventListener('keydown', function(e) {
-  if (e.keyCode === 38 || e.keyCode === 40) {
-    e.preventDefault();
+  if (e.keyCode === 83 || e.keyCode === 87) {
+    protagonist.accelerating = true;
   }
   keys[e.keyCode] = true;
-  keydown = true;
 });
 
+// sets released keycode to false
 document.addEventListener('keyup', function(e) {
   keys[e.keyCode] = false;
+  if (e.keyCode === 83 ||
+      e.keyCode === 87) {
+    protagonist.accelerating = false;
+  }
 });
 
+// this code handles the tractor beam toggle
 document.addEventListener('keypress', function(e) {
   if (e.keyCode === 32) {
     if (protagonist.carrying) {
@@ -684,5 +908,8 @@ document.addEventListener('keypress', function(e) {
         asteroid.tracting = !asteroid.tracting;
       }
     });
+  }
+  if (e.keyCode === 103) {
+    guidance.active = !guidance.active;
   }
 });

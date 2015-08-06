@@ -2,3 +2,8 @@ body {
   text-align: center;
   background-color: black;
 }
+
+@font-face {
+  font-family: 'Future';
+  src: url(../fonts/kenvector_future_thin.ttf);
+}
