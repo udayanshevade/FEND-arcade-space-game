@@ -124,7 +124,7 @@ var Engine = (function(global) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         update(dt);
         render();
-        playSounds();
+        //playSounds();
 
         /* Set our lastTime variable which is used to determine the time delta
          * for the next time this function is called.
@@ -290,12 +290,13 @@ var Engine = (function(global) {
 
     /*
     Now load all the sounds that will be used for the game.
-    */
 
     Resources.loadAudio(['audio/warp.wav',
                         'audio/wormhole.wav',
                         'audio/space-ambience.wav',
                         'audio/space-bass.wav']);
+    */
+
     Resources.onReady(init);
 
     /* Assign the canvas' context object to the global variable (the window

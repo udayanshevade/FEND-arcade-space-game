@@ -360,10 +360,10 @@ var Protagonist = function() {
 // Updates the protagonist instance with every animation request
 Protagonist.prototype.update = function() {
   // Store sound of entering wormhole
-  var warpingSound = Resources.get('audio/wormhole.wav');
+  //var warpingSound = Resources.get('audio/wormhole.wav');
   // Checks to ensure player is not warping
   if (!this.warping) {
-    warpingSound.pause();
+    //warpingSound.pause();
     // moves according to current velocity
     this.move();
     // default drift upwards
@@ -387,8 +387,8 @@ Protagonist.prototype.update = function() {
   }
   else if (this.warping) {
     // play sound when inside wormhole
-    warpingSound.volume = 0.5;
-    warpingSound.play();
+    //warpingSound.volume = 0.5;
+    //warpingSound.play();
   }
   if (this.enteredWarp) {
     // warp gate fades out of view immediately
