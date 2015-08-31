@@ -24,7 +24,20 @@ var Engine = (function(global) {
         canvas = doc.createElement('canvas'),
         ctx = canvas.getContext('2d'),
         gameState = 'Playing',
+        spaceAmbience = new Audio('audio/space-ambience.wav'),
+        spaceBass = new Audio('audio/space-bass.wav'),
+        wormhole = new Audio('audio/wormhole.wav'),
+        warpSound = new Resources.SoundCache(3),
         lastTime;
+
+    // initialize sounds
+    warpSound.init('warpSound');
+    spaceAmbience.loop = true;
+    spaceAmbience.load();
+    spaceBass.loop = true;
+    spaceBass.load();
+    wormhole.loop = true;
+    wormhole.load();
 
 
     doc.body.appendChild(canvas);
@@ -77,29 +90,28 @@ var Engine = (function(global) {
 
     // Listens for double click to place warp gate
     canvas.addEventListener('dblclick', function(e) {
-        if (!protagonist.warping
-            && !(allAsteroids.some(checkAsteroidWarping))) {
+        if (!warp.warpingObjects.length) {
             warp.warpable = true;
+            warp.maxCount -= 5;
         }
+        var warpingObject;
         warp.active = true;
+        warp.waiting = false;
         warp.place(mousePos);
         warp.alpha = 1;
-        if (protagonist.warping) {
-            protagonist.warping = false;
-            protagonist.warp(mousePos);
-        }
-        allAsteroids.forEach(function(eachAsteroid) {
-            if (eachAsteroid.warping) {
-                eachAsteroid.warping = false;
-                eachAsteroid.warp(mousePos);
+        warpSound.get();
+        if (warp.warping) {
+            var warpingLength = warp.warpingObjects.length;
+            for (var obj = 0; obj < warpingLength; obj++) {
+                warpingObject = warp.warpingObjects.pop();
+                warpingObject.warping = false;
+                warpingObject.warp(mousePos);
             }
-        });
+            warp.warping = false;
+            warp.warpingObject = null;
+        }
     });
 
-    // checks if any asteroids are warping
-    function checkAsteroidWarping(element, index, array) {
-        return element.warping;
-    }
 
     /* This function serves as the kickoff point for the game loop itself
      * and handles properly calling the update and render methods.
@@ -114,8 +126,13 @@ var Engine = (function(global) {
         var now = Date.now(),
             dt = (now - lastTime) / 1000.0;
 
+        global.counter++;
         global.now = now;
         global.dt = dt;
+
+        if (global.counter % 500 === 0) {
+            allAsteroids[allAsteroids.length + 1] = new Asteroid();
+        }
 
         /* Call our update/render functions, pass along the time delta to
          * our update function since it may be used for smooth animation.
@@ -124,12 +141,24 @@ var Engine = (function(global) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         update(dt);
         render();
-        //playSounds();
+        spaceAmbience.play();
+        spaceBass.play();
+
+        if (protagonist.warping) {
+            wormhole.play();
+        }
+        else {
+            wormhole.pause();
+        }
 
         /* Set our lastTime variable which is used to determine the time delta
          * for the next time this function is called.
          */
         lastTime = now;
+
+        if (protagonist.crashed) {
+            reset();
+        }
 
         /* Use the browser's requestAnimationFrame function to call this
          * function again as soon as the browser is able to draw another frame.
@@ -143,8 +172,21 @@ var Engine = (function(global) {
      */
     function init() {
         reset();
+
         lastTime = Date.now();
-        main();
+
+        global.counter = 0;
+
+        // checks readiness of audio
+        this.checkAudio = window.setInterval(function() {
+            checkReadyState()}, 1000);
+
+        function checkReadyState() {
+            if (spaceAmbience.readyState === 4 && spaceBass.readyState === 4 && wormhole.readyState === 4) {
+                clearInterval(checkAudio);
+                main();
+            }
+        }
     }
 
     /* This function is called by main (our game loop) and itself calls all
@@ -167,8 +209,9 @@ var Engine = (function(global) {
         starQuadrants.forEach(function(quadrant){
             quadrant.update(dt);
         });
+
         bgObjectPassing = allBackgroundObjects.some(checkBackgroundObject);
-        if (protagonist.traveled % 20000 === 0 && !bgObjectPassing) {
+        if (protagonist.traveled % 1000 === 0 && !bgObjectPassing) {
             var objectIndex = Math.floor(Math.random() * allBackgroundObjects.length);
             backgroundObject = allBackgroundObjects[objectIndex];
             backgroundObject.spawn();
@@ -194,9 +237,7 @@ var Engine = (function(global) {
         allAsteroids.forEach(function(eachAsteroid) {
             eachAsteroid.update(dt);
         });
-        if (warp.active) {
-            warp.update();
-        }
+        warp.update();
     }
 
     /* This function initially draws the "game level", it will then call
@@ -243,18 +284,12 @@ var Engine = (function(global) {
 
     }
 
-    function playSounds() {
-        var stars = starQuadrants[0];
-        Resources.get(stars.soundOne).play();
-        Resources.get(stars.soundTwo).play();
-    }
-
     /* This function does nothing but it could have been a good place to
      * handle game reset states - maybe a new game menu or a game over screen
      * those sorts of things. It's only called once by the init() method.
      */
     function reset() {
-        // noop
+        protagonist.respawn();
     }
 
     /* Go ahead and load all of the images we know we're going to need to
@@ -263,7 +298,7 @@ var Engine = (function(global) {
      */
     Resources.load('img/stars-background.png');
 
-    Resources.load('img/asteroid-1.png');
+    Resources.load(['img/asteroid-1.png', 'img/asteroid-2.png']);
     Resources.load('img/protagonist/blue-explosion.png');
 
     Resources.load('img/warp-gate-2.png')
@@ -304,5 +339,6 @@ var Engine = (function(global) {
      * from within their app.js files.
      */
     global.ctx = ctx;
+    global.warpSound = warpSound;
 })(this);
 

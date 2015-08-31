@@ -75,59 +75,30 @@
      * the same as calling load() on that URL.
      */
 
-    function loadAudio(urlOrArr) {
-        if(urlOrArr instanceof Array) {
-            /* If the developer passed in an array of images
-             * loop through each value and call our image
-             * loader on that image file
-             */
-            urlOrArr.forEach(function(url) {
-                _loadAudio(url);
-            });
-        } else {
-            /* The developer did not pass an array to this function,
-             * assume the value is a string and call our image loader
-             * directly.
-             */
-            _loadAudio(urlOrArr);
-        }
-    }
+    // Creates a sound cache like resource cache for images
+    function SoundCache(maxSize) {
+        var size = maxSize;
+        var cache = [];
+        this.cache = cache;
+        var currSound = 0;
 
-
-    function _loadAudio(url) {
-        if(resourceCache[url]) {
-            /* If this URL has been previously loaded it will exist within
-             * our resourceCache array. Just return that image rather
-             * re-loading the resource.
-             */
-            return resourceCache[url];
-        } else {
-            /* This URL has not been previously loaded and is not present
-             * within our cache; we'll need to load this image.
-             */
-            var audio = new Audio();
-            audio.oncanplaythrough = function() {
-                /* Once our image has properly loaded, add it to our cache
-                 * so that we can simply return this image if the developer
-                 * attempts to load this file in the future.
-                 */
-                resourceCache[url] = audio;
-
-                /* Once the image is actually loaded and properly cached,
-                 * call all of the onReady() callbacks we have defined.
-                 */
-                if(isReady()) {
-                    readyCallbacks.forEach(function(func) { func(); });
+        // populates pool array with desired Sound
+        this.init = function(object) {
+            if (object === 'warpSound') {
+                for (var i = 0; i < size; i++) {
+                    warpSound = new Audio(warp.sound);
+                    warpSound.load();
+                    cache[i] = warpSound;
                 }
-            };
+            }
+        };
 
-            /* Set the initial cache value to false, this will change when
-             * the image's onload event handler is called. Finally, point
-             * the images src attribute to the passed in URL.
-             */
-            resourceCache[url] = false;
-            audio.src = url;
-        }
+        this.get = function() {
+            if (cache[currSound].currentTime === 0 || cache[currSound].ended) {
+                cache[currSound].play();
+            }
+            currSound = (currSound + 1) % size;
+        };
     }
 
 
@@ -161,8 +132,8 @@
      * developers by creating a global Resources object.
      */
     window.Resources = {
+        SoundCache: SoundCache,
         load: load,
-        loadAudio: loadAudio,
         get: get,
         onReady: onReady,
         isReady: isReady

@@ -11,7 +11,7 @@ var allBackgroundImages = [
               'x' : null,
               'width' : 1024,
               'height' : 768,
-              'proximity' : 60,
+              'proximity' : 40,
               'alpha' : 0.6,
               'messages' : ['']
             },
@@ -21,7 +21,7 @@ var allBackgroundImages = [
               'x' : null,
               'width' : 894,
               'height' : 894,
-              'proximity' : 70,
+              'proximity' : 45,
               'alpha' : 0.7,
               'messages' : ['']
             },
@@ -31,8 +31,8 @@ var allBackgroundImages = [
               'x' : -800,
               'width' : 2560,
               'height' : 1600,
-              'proximity' : 70,
-              'alpha' : 0.7,
+              'proximity' : 38,
+              'alpha' : 0.5,
               'messages' : ['']
             },
             {
@@ -41,8 +41,8 @@ var allBackgroundImages = [
               'x' : -800,
               'width' : 2560,
               'height' : 1600,
-              'proximity' : 70,
-              'alpha' : 0.8,
+              'proximity' : 32,
+              'alpha' : 0.6,
               'messages' : ['']
             },
             {
@@ -51,7 +51,7 @@ var allBackgroundImages = [
               'x' : null,
               'width' : 300,
               'height' : 300,
-              'proximity' : 80,
+              'proximity' : 50,
               'alpha' : 1,
               'messages' : ['']
             },
@@ -61,7 +61,7 @@ var allBackgroundImages = [
               'x' : null,
               'width' : 500,
               'height' : 500,
-              'proximity' : 95,
+              'proximity' : 45,
               'alpha' : 1,
               'messages' : ['']
             },
@@ -71,7 +71,7 @@ var allBackgroundImages = [
               'x' : null,
               'width' : 600,
               'height' : 600,
-              'proximity' : 70,
+              'proximity' : 50,
               'alpha' : 1,
               'messages' : ['']
             },
@@ -91,7 +91,7 @@ var allBackgroundImages = [
               'x' : null,
               'width' : 1050,
               'height' : 735,
-              'proximity' : 60,
+              'proximity' : 55,
               'alpha' : 1,
               'messages' : ['']
             },
@@ -101,7 +101,7 @@ var allBackgroundImages = [
               'x' : null,
               'width' : 800,
               'height' : 480,
-              'proximity' : 70,
+              'proximity' : 45,
               'alpha' : 1,
               'messages' : ['']
             },
@@ -111,7 +111,7 @@ var allBackgroundImages = [
               'x' : null,
               'width' : 700,
               'height' : 650,
-              'proximity' : 90,
+              'proximity' : 50,
               'alpha' : 1,
               'messages' : ['']
             },
@@ -121,7 +121,7 @@ var allBackgroundImages = [
               'x' : null,
               'width' : 1200,
               'height' : 1000,
-              'proximity' : 90,
+              'proximity' : 60,
               'alpha' : 1,
               'messages' : ['']
             }
@@ -149,8 +149,6 @@ var crashFrameIndex = 0;
 */
 var BackgroundStars = function(x, y) {
   this.src = 'img/stars-background.png';
-  this.soundOne = 'audio/space-ambience.wav';
-  this.soundTwo = 'audio/space-bass.wav';
   this.x = x;
   this.y = y;
   this.width = 512;
@@ -158,7 +156,7 @@ var BackgroundStars = function(x, y) {
   this.velX;
   this.velY;
   this.drift = 40;
-  this.proximity = 50; // higher number => faster parallax effect
+  this.proximity = 35; // higher number => faster parallax effect
 }
 
 // Updates background stars tile object
@@ -215,8 +213,14 @@ BackgroundStars.prototype.wrap = function() {
   if (this.y < -256) {
     this.y = canvasHeight + 256;
   }
-  if (this.y > canvasHeight + 256) {
+  else if (this.y > canvasHeight + 256) {
     this.y = -256;
+  }
+  if (this.x < -512) {
+    this.x = canvasWidth + 512;
+  }
+  else if (this.x > canvasWidth + 512) {
+    this.x = -512;
   }
 };
 
@@ -262,10 +266,6 @@ BackgroundObject.prototype.update = function(dt) {
   if (this.y < -this.height) {
     // places object back at the bottom of the canvas
     this.y = canvasHeight + 256;
-    // resets protagonist traveled count
-    protagonist.traveled = 0;
-    // keeps track of overall game progress
-    protagonist.objectReset++;
     // not passing anymore
     this.passing = false;
   }
@@ -337,13 +337,15 @@ var Protagonist = function() {
   // centers player overhead at the beginning
   this.x = canvasWidth/2 - this.width/2;
   this.y = 30;
+  // player health
+  this.health = 100;
   // slight residual velocity for in media res effect
   this.velX = 0;
   this.velY = 2;
   // gradual brakes
   this.deceleration = 0.99;
   // maximum allowed speed
-  this.maxSpeed = 3;
+  this.maxSpeed = 2;
   // keeps track of how long protagonist has traveled since reset
   this.traveled = 0;
   this.objectReset = 0;
@@ -359,8 +361,6 @@ var Protagonist = function() {
 
 // Updates the protagonist instance with every animation request
 Protagonist.prototype.update = function() {
-  // Store sound of entering wormhole
-  //var warpingSound = Resources.get('audio/wormhole.wav');
   // Checks to ensure player is not warping
   if (!this.warping) {
     //warpingSound.pause();
@@ -370,11 +370,11 @@ Protagonist.prototype.update = function() {
     this.y -= this.drift;
     // keeps player fixed if moving fast ==> better feel
     // and if not warping ==> allows quick access to warp gates
-    /*if (this.velY > 0.5
+    if (this.velY > this.maxSpeed/2
         && !warp.active
         && this.y > canvasHeight/3 - this.height) {
       this.y -= (this.velY - this.drift);
-    }*/
+    }
     // Makes sure player remains visible within bounds
     this.checkBounds();
     // reassigns sprite based on velocity
@@ -446,7 +446,7 @@ Protagonist.prototype.moveTowards = function(input) {
   var xDist = input.x - thisCenterX;
   var yDist = input.y - thisCenterY;
 
-  // calculates angle
+  // calculates angle between click and player
   var pathAngle = Math.atan2(yDist, xDist);
   if (pathAngle < 0) {
     pathAngle = tau + pathAngle;
@@ -500,7 +500,11 @@ Protagonist.prototype.checkWarpEntry = function() {
   var yDist = Math.abs(thisCenterY - warpCenterY);
   if (xDist < halfWarpSide && yDist < halfWarpSide) {
     this.warping = true;
+    warp.warpingObjects.push(this);
     this.enteredWarp = true;
+    warp.countingDown = true;
+    warp.warping = true;
+    warp.waiting = true;
   }
 };
 
@@ -509,10 +513,20 @@ Protagonist.prototype.checkWarpEntry = function() {
 Protagonist.prototype.warp = function(input) {
   this.x = input.x;
   this.y = input.y;
-  Resources.get(warp.sound).play();
+  //Resources.get(warp.sound).play();
   warp.fading = true;
 };
 
+
+// respawns player if crashed
+Protagonist.prototype.respawn = function() {
+  this.crashed = false;
+  this.traveled = 0;
+  this.x = canvasWidth/2 - this.width/2;
+  this.y = 30;
+  this.velX = 0;
+  this.velY = 2;
+};
 
 
 /**********************************************
@@ -529,6 +543,9 @@ var Warp = function() {
   this.src = 'img/warp-gate-2.png';
   this.sound = 'audio/warp.wav';
   this.active = false;
+  this.warpingObjects = [];
+  this.waiting = false;
+  this.warping = false;
   this.warpable = false;
   this.fading = false;
   this.angle = 0;
@@ -536,6 +553,9 @@ var Warp = function() {
   this.shrinkRate = 0.25;
   this.fadeRate = 0.025;
   this.alpha = 1;
+  this.counter = 0;
+  this.maxCount = 500;
+  this.countingDown = false;
 };
 
 
@@ -556,14 +576,44 @@ Warp.prototype.render = function() {
   ctx.restore();
 };
 
+// updates warp gate properties
 Warp.prototype.update = function(dt) {
   this.rotate();
   this.disintegrate();
   if (this.fading) {
     this.fade();
   }
+  if (this.waiting) {
+    if (this.counter < this.maxCount) {
+      this.counter++;
+    }
+    else {
+      // gets globally defined warp sound
+      warpSound.get();
+      // creates a random position object
+      var randomPos = {'x': Math.random() * canvasWidth, 'y': Math.random() * canvasHeight};
+      // resets waiting counter and warp gate properties
+      this.counter = 0;
+      this.active = true;
+      this.alpha = 1;
+      this.waiting = false;
+      this.warpable = false;
+      // if warp gate isn't created in time, the warp gate appears randomly
+      this.place(randomPos);
+      // also randomly spawns the warping objects
+      if (warp.warpingObjects.length) {
+        for (var obj = 0; obj < warp.warpingObjects.length; obj++) {
+          warpingObject = warp.warpingObjects.pop();
+          warpingObject.warping = false;
+          warpingObject.warp(randomPos);
+        }
+      }
+    }
+    this.countingDown = true;
+  }
 };
 
+// disintegrates warp gate after set time
 Warp.prototype.disintegrate = function(dt) {
   if (this.time > this.shrinkRate) {
     this.time -= this.shrinkRate;
@@ -573,6 +623,7 @@ Warp.prototype.disintegrate = function(dt) {
   }
 };
 
+// fades warp gate
 Warp.prototype.fade = function() {
   if (this.alpha < 0.2) {
     if (this.warpable) {
@@ -587,13 +638,16 @@ Warp.prototype.fade = function() {
   }
 }
 
+// resets warp gate values
 Warp.prototype.reset = function() {
   this.fading = false;
   this.active = false;
+  this.countingDown = false;
   this.time = 100;
   this.alpha = 1;
 };
 
+// controls warp gate rotation
 Warp.prototype.rotate = function() {
   if (this.angle < tau) {
     this.angle += tau * dt;
@@ -603,6 +657,7 @@ Warp.prototype.rotate = function() {
   }
 };
 
+// positions warp gate
 Warp.prototype.place = function(input) {
   this.x = input.x - this.side/2;
   this.y = input.y - this.side/2;
@@ -617,16 +672,18 @@ Warp.prototype.place = function(input) {
 
 // declares basic asteroid properties
 var Asteroid = function() {
-  this.side = 45;
+  this.side = 8 + Math.random() * 45;
   this.x = canvasWidth/2 - this.side/2;
   this.y = canvasHeight;
   this.angle = Math.random() * tau;
-  this.src = 'img/asteroid-1.png';
+  this.srcSet = ['img/asteroid-1.png', 'img/asteroid-2.png'];
+  this.srcIndex = Math.round(Math.random());
   this.maxVelX = 5;
-  this.maxVelY = -20;
+  this.maxVelY = -30;
   this.velX = -this.maxVelX + Math.random() * this.maxVelX * 2;
   this.velY = Math.random() * this.maxVelY;
   this.acceleration = 1.008;
+  this.rotationDirection = Math.round(Math.random()) * 2 - 1;
   this.rotationRate = Math.random() * 0.25;
   this.enteredWarp = false;
   this.warping = false;
@@ -639,7 +696,9 @@ Asteroid.prototype.update = function(dt) {
     // moves according to randomly generated velocity
     this.move(dt);
     // resets if asteroid moves out of bounds
-    this.checkBounds();
+    if (!this.crashing) {
+      this.checkBounds();
+    }
     // checks if asteroid has crashed into player
     if (!protagonist.warping) {
       this.checkCrash();
@@ -681,6 +740,8 @@ Asteroid.prototype.checkCrash = function() {
   }
 };
 
+
+// controls asteroid crash animation
 Asteroid.prototype.animateCrash = function(x, y) {
   var sx = crashFrames[crashFrameIndex].sx;
   var sy = crashFrames[crashFrameIndex].sy;
@@ -700,10 +761,11 @@ Asteroid.prototype.animateCrash = function(x, y) {
     crashFrameIndex = 0;
     this.crashing = false;
     this.reset();
+    protagonist.crashed = true;
   }
 };
 
-// renders asteroid image and rotates image
+// renders rotating asteroid image or crashing animation
 Asteroid.prototype.render = function() {
   if (!this.crashing) {
     var centerX = this.x + this.side/2;
@@ -712,7 +774,7 @@ Asteroid.prototype.render = function() {
     ctx.translate(centerX, centerY);
     ctx.rotate(this.angle);
     ctx.translate(-centerX, -centerY);
-    ctx.drawImage(Resources.get(this.src),
+    ctx.drawImage(Resources.get(this.srcSet[this.srcIndex]),
                   this.x,
                   this.y,
                   this.side,
@@ -732,7 +794,7 @@ Asteroid.prototype.move = function(dt) {
 
 Asteroid.prototype.rotate = function() {
   if (this.angle < tau) {
-    this.angle += tau * dt * this.rotationRate;
+    this.angle += tau * dt * this.rotationRate * this.rotationDirection;
   }
   else {
     this.angle = 0;
@@ -769,8 +831,11 @@ Asteroid.prototype.checkWarpEntry = function() {
   var yDist = Math.abs(thisCenterY - warpCenterY);
   if (xDist < halfWarpSide && yDist < halfWarpSide) {
     this.warping = true;
+    warp.warpingObjects.push(this);
     this.enteredWarp = true;
     warp.fading = true;
+    warp.warping = true;
+    warp.waiting = true;
   }
 };
 
@@ -778,7 +843,6 @@ Asteroid.prototype.checkWarpEntry = function() {
 Asteroid.prototype.warp = function(input) {
   this.x = input.x;
   this.y = input.y;
-  //Resources.get(warp.sound).play();
   warp.fading = false;
 };
 
@@ -820,7 +884,7 @@ allBackgroundImages.forEach(function(bgObj) {
 
 
 // For asteroid objects
-var maxAsteroids = 5;
+var maxAsteroids = 1;
 var allAsteroids = [];
 
 for (var asteroidIndex = 0; asteroidIndex < maxAsteroids; asteroidIndex++) {
