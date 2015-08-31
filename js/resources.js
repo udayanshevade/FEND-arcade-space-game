@@ -91,6 +91,13 @@
                     cache[i] = warpSound;
                 }
             }
+            if (object === 'explosion') {
+                for (var i = 0; i < size; i++) {
+                    explosion = new Audio(protagonist.explosionSound);
+                    explosion.load();
+                    cache[i] = explosion;
+                }
+            }
         };
 
         this.get = function() {

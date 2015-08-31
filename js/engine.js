@@ -27,21 +27,27 @@ var Engine = (function(global) {
         spaceAmbience = new Audio('audio/space-ambience.wav'),
         spaceBass = new Audio('audio/space-bass.wav'),
         wormhole = new Audio('audio/wormhole.wav'),
+        obliteration = new Audio('audio/obliteration.wav'),
         warpSound = new Resources.SoundCache(3),
+        explosion = new Resources.SoundCache(1),
         lastTime;
 
     // initialize sounds
     warpSound.init('warpSound');
+    explosion.init('explosion');
+    spaceAmbience.volume = 0.6;
     spaceAmbience.loop = true;
     spaceAmbience.load();
+    spaceBass.volume = 0.7;
     spaceBass.loop = true;
     spaceBass.load();
     wormhole.loop = true;
     wormhole.load();
+    obliteration.volume = 0.5;
+    obliteration.load();
 
-
+    // append canvas to document
     doc.body.appendChild(canvas);
-
     canvas.width = 800;
     canvas.height = 600;
 
@@ -95,6 +101,7 @@ var Engine = (function(global) {
             warp.maxCount -= 5;
         }
         var warpingObject;
+        warp.counter = 0;
         warp.active = true;
         warp.waiting = false;
         warp.place(mousePos);
@@ -117,6 +124,7 @@ var Engine = (function(global) {
      * and handles properly calling the update and render methods.
      */
     function main() {
+        console.log(protagonist.traveled);
         /* Get our time delta information which is required if your game
          * requires smooth animation. Because everyone's computer processes
          * instructions at different speeds we need a constant value that
@@ -130,10 +138,6 @@ var Engine = (function(global) {
         global.now = now;
         global.dt = dt;
 
-        if (global.counter % 500 === 0) {
-            allAsteroids[allAsteroids.length + 1] = new Asteroid();
-        }
-
         /* Call our update/render functions, pass along the time delta to
          * our update function since it may be used for smooth animation.
          */
@@ -145,6 +149,7 @@ var Engine = (function(global) {
         spaceBass.play();
 
         if (protagonist.warping) {
+            spaceAmbience.pause();
             wormhole.play();
         }
         else {
@@ -171,7 +176,6 @@ var Engine = (function(global) {
      * game loop.
      */
     function init() {
-        reset();
 
         lastTime = Date.now();
 
@@ -199,13 +203,14 @@ var Engine = (function(global) {
      * on the entities themselves within your app.js file).
      */
     function update(dt) {
-        updateLayers(dt);
-        updateEntities(dt);
+        spawnAsteroid();
+        updateBackgroundObjects(dt);
+        updateForegroundObjects(dt);
     }
 
-    var backgroundObject;
+    var backgroundObject = null;
 
-    function updateLayers(dt) {
+    function updateBackgroundObjects(dt) {
         starQuadrants.forEach(function(quadrant){
             quadrant.update(dt);
         });
@@ -232,12 +237,18 @@ var Engine = (function(global) {
      * the data/properties related to  the object. Do your drawing in your
      * render methods.
      */
-    function updateEntities(dt) {
+    function updateForegroundObjects(dt) {
         protagonist.update();
         allAsteroids.forEach(function(eachAsteroid) {
             eachAsteroid.update(dt);
         });
         warp.update();
+    }
+
+    function spawnAsteroid() {
+        if (global.counter % 500 === 0) {
+            allAsteroids[allAsteroids.length + 1] = new Asteroid();
+        }
     }
 
     /* This function initially draws the "game level", it will then call
@@ -247,11 +258,11 @@ var Engine = (function(global) {
      * they are just drawing the entire screen over and over.
      */
     function render() {
-        renderLayers();
-        renderEntities();
+        renderBackgroundObjects();
+        renderForegroundObjects();
     }
 
-    function renderLayers() {
+    function renderBackgroundObjects() {
         starQuadrants.forEach(function(quadrant){
             quadrant.render();
         });
@@ -266,14 +277,14 @@ var Engine = (function(global) {
      * tick. It's purpose is to then call the render functions you have defined
      * on your enemy and player entities within app.js
      */
-    function renderEntities() {
+    function renderForegroundObjects() {
         /* Loop through all of the objects within the allEnemies array and call
          * the render function you have defined.
          */
         if (warp.active) {
             warp.render();
         }
-        if (!protagonist.warping) {
+        if (!protagonist.warping && protagonist.health > 0) {
             protagonist.render();
         }
         allAsteroids.forEach(function(eachAsteroid) {
@@ -289,7 +300,20 @@ var Engine = (function(global) {
      * those sorts of things. It's only called once by the init() method.
      */
     function reset() {
+        obliteration.currentTime = 0;
+        obliteration.play();
+        allObjectsReset();
+    }
+
+    // collected reset functionality of all entities
+    function allObjectsReset() {
+        allAsteroids = [];
+        allAsteroids[0] = new Asteroid();
         protagonist.respawn();
+        warp.reset();
+        if (backgroundObject) {
+            backgroundObject.reset();
+        }
     }
 
     /* Go ahead and load all of the images we know we're going to need to
@@ -340,5 +364,6 @@ var Engine = (function(global) {
      */
     global.ctx = ctx;
     global.warpSound = warpSound;
+    global.explosion = explosion;
 })(this);
 
