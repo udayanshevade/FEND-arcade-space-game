@@ -329,7 +329,9 @@ BackgroundStars.prototype.update = function(dt) {
   // horizontal panning only based on player motion
   this.panHorizontal(dt);
   // keeps count of how far protagonist has traveled since last reset
-  protagonist.traveled -= move;
+  if (!protagonist.warping) {
+    protagonist.traveled -= move;
+  }
 };
 
 
