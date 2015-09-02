@@ -26,25 +26,25 @@ var Engine = (function(global) {
         gameState = 'Playing',
         spaceAmbience = new Audio('audio/space-ambience.wav'),
         spaceBass = new Audio('audio/space-bass.wav'),
-        wormhole = new Audio('audio/wormhole.wav'),
-        obliteration = new Audio('audio/obliteration.wav'),
+        wormholeSound = new Audio('audio/wormhole.wav'),
+        obliterationSound = new Audio('audio/obliteration.wav'),
         warpSound = new Resources.SoundCache(3),
-        explosion = new Resources.SoundCache(1),
+        explosionSound = new Resources.SoundCache(1),
         lastTime;
 
     // initialize sounds
     warpSound.init('warpSound');
-    explosion.init('explosion');
+    explosionSound.init('explosion');
     spaceAmbience.volume = 0.6;
     spaceAmbience.loop = true;
     spaceAmbience.load();
     spaceBass.volume = 0.7;
     spaceBass.loop = true;
     spaceBass.load();
-    wormhole.loop = true;
-    wormhole.load();
-    obliteration.volume = 0.5;
-    obliteration.load();
+    wormholeSound.loop = true;
+    wormholeSound.load();
+    obliterationSound.volume = 0.5;
+    obliterationSound.load();
 
     // append canvas to document
     doc.body.appendChild(canvas);
@@ -124,7 +124,6 @@ var Engine = (function(global) {
      * and handles properly calling the update and render methods.
      */
     function main() {
-        console.log(protagonist.traveled);
         /* Get our time delta information which is required if your game
          * requires smooth animation. Because everyone's computer processes
          * instructions at different speeds we need a constant value that
@@ -150,10 +149,10 @@ var Engine = (function(global) {
 
         if (protagonist.warping) {
             spaceAmbience.pause();
-            wormhole.play();
+            wormholeSound.play();
         }
         else {
-            wormhole.pause();
+            wormholeSound.pause();
         }
 
         /* Set our lastTime variable which is used to determine the time delta
@@ -186,7 +185,7 @@ var Engine = (function(global) {
             checkReadyState()}, 1000);
 
         function checkReadyState() {
-            if (spaceAmbience.readyState === 4 && spaceBass.readyState === 4 && wormhole.readyState === 4) {
+            if (spaceAmbience.readyState === 4 && spaceBass.readyState === 4 && wormholeSound.readyState === 4) {
                 clearInterval(checkAudio);
                 main();
             }
@@ -203,6 +202,7 @@ var Engine = (function(global) {
      * on the entities themselves within your app.js file).
      */
     function update(dt) {
+        console.log(Math.ceil(protagonist.traveled));
         spawnAsteroid();
         updateBackgroundObjects(dt);
         updateForegroundObjects(dt);
@@ -216,7 +216,7 @@ var Engine = (function(global) {
         });
 
         bgObjectPassing = allBackgroundObjects.some(checkBackgroundObject);
-        if (protagonist.traveled % 1000 === 0 && !bgObjectPassing) {
+        if (protagonist.traveled % 1000 < 25 && !bgObjectPassing) {
             var objectIndex = Math.floor(Math.random() * allBackgroundObjects.length);
             backgroundObject = allBackgroundObjects[objectIndex];
             backgroundObject.spawn();
@@ -300,8 +300,8 @@ var Engine = (function(global) {
      * those sorts of things. It's only called once by the init() method.
      */
     function reset() {
-        obliteration.currentTime = 0;
-        obliteration.play();
+        obliterationSound.currentTime = 0;
+        obliterationSound.play();
         allObjectsReset();
     }
 
@@ -347,14 +347,6 @@ var Engine = (function(global) {
                   'img/star-crescent-planet.png',
                   'img/asteroid-field-1.png'])
 
-    /*
-    Now load all the sounds that will be used for the game.
-
-    Resources.loadAudio(['audio/warp.wav',
-                        'audio/wormhole.wav',
-                        'audio/space-ambience.wav',
-                        'audio/space-bass.wav']);
-    */
 
     Resources.onReady(init);
 
@@ -364,6 +356,6 @@ var Engine = (function(global) {
      */
     global.ctx = ctx;
     global.warpSound = warpSound;
-    global.explosion = explosion;
+    global.explosionSound = explosionSound;
 })(this);
 

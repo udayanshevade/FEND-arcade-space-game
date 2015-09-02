@@ -15,6 +15,7 @@ var allBackgroundImages = [
               'height' : 768,
               'proximity' : 40,
               'alpha' : 0.6,
+              // TODO: messages to implement background plot
               'messages' : ['']
             },
             {
@@ -133,6 +134,7 @@ var allBackgroundImages = [
 var crashFrames = [];
 for (var m = 0; m < 512; m += 128) {
   for (var n = 0; n < 768; n += 256) {
+    // compiles x and y coordinates for frames from the spritesheet
     crashFrames.push({'sx': n, 'sy': m});
   }
 }
@@ -539,6 +541,7 @@ Protagonist.prototype.update = function() {
 
 
 // Orients sprite based on velocity of the player
+// TODO: use only one character sheet ideally
 Protagonist.prototype.orientSprite = function() {
   if (this.velX > 0.75 && this.velY > 0) {
     this.src = 'img/protagonist/ship-down-right.png';
@@ -641,10 +644,11 @@ Protagonist.prototype.displayHealth = function() {
   ctx.strokeRect(canvasWidth - 102, 10, 100, 20);
 };
 
+// shows distance traveled
 Protagonist.prototype.displayTravel = function() {
   ctx.font = '12px Arial';
   ctx.fillStyle = 'white';
-  ctx.fillText(Math.ceil(this.traveled) + ' parsecs traveled', 10, 20);
+  ctx.fillText(Math.ceil(this.traveled) + ' thousand miles traveled', 10, 20);
 };
 
 
@@ -880,7 +884,7 @@ Asteroid.prototype.checkCrash = function() {
     this.crashing = true;
     protagonist.crashing = true;
     if (protagonist.health > 0) {
-      explosion.get();
+      explosionSound.get();
     }
   }
 };

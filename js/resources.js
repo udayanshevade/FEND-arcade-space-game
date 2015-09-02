@@ -93,9 +93,9 @@
             }
             if (object === 'explosion') {
                 for (var i = 0; i < size; i++) {
-                    explosion = new Audio(protagonist.explosionSound);
-                    explosion.load();
-                    cache[i] = explosion;
+                    explosionSound = new Audio(protagonist.explosionSound);
+                    explosionSound.load();
+                    cache[i] = explosionSound;
                 }
             }
         };
