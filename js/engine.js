@@ -23,16 +23,19 @@ var Engine = (function(global) {
         win = global.window,
         canvas = doc.createElement('canvas'),
         ctx = canvas.getContext('2d'),
+        // TODO: Expand on gamestates with a more elaborate FSM
         gameState = 'Playing',
+        // initialize non-cached audio
         spaceAmbience = new Audio('audio/space-ambience.wav'),
         spaceBass = new Audio('audio/space-bass.wav'),
         wormholeSound = new Audio('audio/wormhole.wav'),
         obliterationSound = new Audio('audio/obliteration.wav'),
         warpSound = new Resources.SoundCache(3),
         explosionSound = new Resources.SoundCache(1),
+        // define variable for updating time
         lastTime;
 
-    // initialize sounds
+    // initialize cached sounds
     warpSound.init('warpSound');
     explosionSound.init('explosion');
     spaceAmbience.volume = 0.6;
@@ -120,6 +123,12 @@ var Engine = (function(global) {
     });
 
 
+    /******************************************
+     *
+     * Now for the main() course
+     *
+     ******************************************/
+
     /* This function serves as the kickoff point for the game loop itself
      * and handles properly calling the update and render methods.
      */
@@ -147,8 +156,11 @@ var Engine = (function(global) {
         spaceAmbience.play();
         spaceBass.play();
 
+        // pause space ambience during warp
         if (protagonist.warping) {
             spaceAmbience.pause();
+            // play wormhole sound for added eerieness
+            // TODO: add more consequences for warping
             wormholeSound.play();
         }
         else {
@@ -161,6 +173,7 @@ var Engine = (function(global) {
         lastTime = now;
 
         if (protagonist.crashed) {
+          // resets game state if the protagonist has been destroyed
             reset();
         }
 
@@ -210,24 +223,31 @@ var Engine = (function(global) {
     var backgroundObject = null;
 
     function updateBackgroundObjects(dt) {
+        // stars will always be updating
         starQuadrants.forEach(function(quadrant){
             quadrant.update(dt);
         });
 
+        // assign background object currently in transit for ease of access
         bgObjectPassing = allBackgroundObjects.some(checkBackgroundObject);
+        // seed background object only @ certain intervals of player progress
         if (protagonist.traveled % 1000 < 25 && !bgObjectPassing) {
+            // spawns random background object
             var objectIndex = Math.floor(Math.random() * allBackgroundObjects.length);
             backgroundObject = allBackgroundObjects[objectIndex];
             backgroundObject.spawn();
         }
         if (backgroundObject) {
+            // updates object only if it is passing
             backgroundObject.update(dt);
         }
     }
 
+    // callback for .some() used above
     function checkBackgroundObject(element, index, array) {
         return (element.passing);
     }
+
 
     /* This is called by the update function  and loops through all of the
      * objects within your allEnemies array as defined in app.js and calls
@@ -299,18 +319,28 @@ var Engine = (function(global) {
      * those sorts of things. It's only called once by the init() method.
      */
     function reset() {
+        // specifically plays the failure sound
         obliterationSound.currentTime = 0;
         obliterationSound.play();
+        // resets the objects
         allObjectsReset();
     }
 
-    // collected reset functionality of all entities
+    // collective reset functionality of all entities
     function allObjectsReset() {
+        // empties existing asteroid objects
         allAsteroids = [];
+        // adds single asteroid again
         allAsteroids[0] = new Asteroid();
+        // respawns protagonist from top
+        // TODO: introduce consequences for repeat failure
+        // TODO: consequences could include space dementia
         protagonist.respawn();
+        // reset warp in case it is active
         warp.reset();
+        // if there is a background object in transit
         if (backgroundObject) {
+            // reset it too
             backgroundObject.reset();
         }
     }
@@ -349,8 +379,8 @@ var Engine = (function(global) {
 
     Resources.onReady(init);
 
-    /* Assign the canvas' context object to the global variable (the window
-     * object when run in a browser) so that developer's can use it more easily
+    /* Assign objects to the global variable (the window object when
+     * run in a browser) so that developer's can use it more easily
      * from within their app.js files.
      */
     global.ctx = ctx;

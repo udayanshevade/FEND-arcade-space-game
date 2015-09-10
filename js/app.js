@@ -513,7 +513,7 @@ Protagonist.prototype.update = function() {
     // default drift upwards
     this.y -= this.drift;
     // keeps player fixed if moving fast ==> better feel
-    // and if not warping ==> allows quick access to warp gates
+    // and if there is a warp gate ==> allows quick access by freeing motion
     if (this.velY > this.maxSpeed/2
         && !warp.active
         && this.y > canvasHeight/3 - this.side) {
@@ -543,6 +543,7 @@ Protagonist.prototype.update = function() {
 // Orients sprite based on velocity of the player
 // TODO: use only one character sheet ideally
 Protagonist.prototype.orientSprite = function() {
+  // loads different sprites if velocity in different directions
   if (this.velX > 0.75 && this.velY > 0) {
     this.src = 'img/protagonist/ship-down-right.png';
   }
@@ -570,6 +571,7 @@ Protagonist.prototype.render = function() {
                 this.y,
                 this.side,
                 this.side);
+  // only shows if player is not warping
   this.displayHealth();
   this.displayTravel();
 };
