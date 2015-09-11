@@ -1,9 +1,8 @@
-var pi = Math.PI;
-var tau = pi * 2;
-var canvasWidth = 800;
-var canvasHeight = 600;
-var halfCanvasWidth = canvasWidth/2;
-var halfCanvasHeight = canvasHeight/2;
+var PI = Math.PI;
+var TAU = PI * 2;
+var CANVAS_WIDTH = 800;
+var CANVAS_HEIGHT = 600;
+var HALF_CANVAS_WIDTH = CANVAS_WIDTH/2;
 
 // List of background object images to inherit unique properties
 var allBackgroundImages = [
@@ -134,7 +133,7 @@ var allBackgroundImages = [
 var crashFrames = [];
 for (var m = 0; m < 512; m += 128) {
   for (var n = 0; n < 768; n += 256) {
-    // compiles x and y coordinates for frames from the spritesheet
+    // comPIles x and y coordinates for frames from the spritesheet
     crashFrames.push({'sx': n, 'sy': m});
   }
 }
@@ -155,13 +154,13 @@ var crashFrameIndex = 0;
  */
 
 var Drawable = function() {
-  this.src;
-  this.x;
-  this.y;
-  this.width;
-  this.height;
-  this.velX;
-  this.velY;
+  this.src = '';
+  this.x = 0;
+  this.y = 0;
+  this.width = 0;
+  this.height = 0;
+  this.velX = 0;
+  this.velY = 0;
 };
 
 Drawable.prototype.render = function() {
@@ -193,8 +192,8 @@ BackgroundDrawable.prototype.constructor = BackgroundDrawable;
 // vertical motion responds to player input
 BackgroundDrawable.prototype.panVertical = function(dt) {
   // TODO: slight lag: velY must be at least 1 given acceleration
-  // ensures protagonist is not warping
-  if (protagonist.velY > 1 && (!protagonist.warping)) {
+  // ensures protagonist is not warPIng
+  if (protagonist.velY > 1 && (!protagonist.warPIng)) {
     // proximity-based parallax
     return (-protagonist.velY * dt * this.proximity);
   }
@@ -202,7 +201,7 @@ BackgroundDrawable.prototype.panVertical = function(dt) {
 
 // horizontal motion responds to player input
 BackgroundDrawable.prototype.panHorizontal = function(dt) {
-  if (!protagonist.warping) {
+  if (!protagonist.warPIng) {
     this.velX = -protagonist.velX * dt * this.proximity;
     this.x += this.velX;
   }
@@ -242,8 +241,8 @@ var Warpable = function() {
   ForegroundDrawable.call(this);
   // state describing object being inside wormhole
   this.enteredWarp = false;
-  // state describing whole process of warping
-  this.warping = false;
+  // state describing whole process of warPIng
+  this.warPIng = false;
 };
 
 // define constructor and prototype chain for Warpable
@@ -261,13 +260,13 @@ Warpable.prototype.checkWarpEntry = function() {
   // calculates distance between object and warp
   var xDist = Math.abs(thisCenterX - warpCenterX);
   var yDist = Math.abs(thisCenterY - warpCenterY);
-  // if distance falls below size of warp, object is warping
+  // if distance falls below size of warp, object is warPIng
   if (xDist < warp.halfSide && yDist < warp.halfSide) {
-    this.warping = true;
-    warp.warpingObjects.push(this);
+    this.warPIng = true;
+    warp.warPIngObjects.push(this);
     this.enteredWarp = true;
     warp.fading = true;
-    warp.warping = true;
+    warp.warPIng = true;
     warp.waiting = true;
   }
 };
@@ -314,7 +313,7 @@ var BackgroundStars = function(x, y) {
   this.height = 256;
   this.drift = 40;
   this.proximity = 35; // higher number => faster parallax effect
-}
+};
 
 // define constructor and prototype chain for Background Stars
 BackgroundStars.prototype = Object.create(BackgroundDrawable.prototype);
@@ -331,7 +330,7 @@ BackgroundStars.prototype.update = function(dt) {
   // horizontal panning only based on player motion
   this.panHorizontal(dt);
   // keeps count of how far protagonist has traveled since last reset
-  if (!protagonist.warping) {
+  if (!protagonist.warPIng) {
     protagonist.traveled -= move;
   }
 };
@@ -350,15 +349,15 @@ BackgroundStars.prototype.render = function() {
 // wraps stars back in view
 BackgroundStars.prototype.wrap = function() {
   if (this.y < -256) {
-    this.y = canvasHeight + 256;
+    this.y = CANVAS_HEIGHT + 256;
   }
-  else if (this.y > canvasHeight + 256) {
+  else if (this.y > CANVAS_HEIGHT + 256) {
     this.y = -256;
   }
   if (this.x < -512) {
-    this.x = canvasWidth + 512;
+    this.x = CANVAS_WIDTH + 512;
   }
-  else if (this.x > canvasWidth + 512) {
+  else if (this.x > CANVAS_WIDTH + 512) {
     this.x = -512;
   }
 };
@@ -382,18 +381,18 @@ var BackgroundObject = function(src, x, width, height, proximity, alpha) {
   this.defaultX = x;
   // either uses passed in a x value or creates a random spawn
   this.x = this.defaultX ||
-           -512 + (Math.random() * (canvasWidth - this.width));
+           -512 + (Math.random() * (CANVAS_WIDTH - this.width));
   // starts the object at the bottom of the screen
-  this.y = canvasHeight + 512;
+  this.y = CANVAS_HEIGHT + 512;
   this.width = width;
   this.height = height;
   // sets specified transparency of object
   this.alpha = alpha;
   this.drift = 30;
   this.proximity = proximity;
-  // prevents crowding by keeping track of passing objects
+  // prevents crowding by keePIng track of passing objects
   this.passing = false;
-}
+};
 
 // define constructor and prototype chain for Background Objects
 BackgroundObject.prototype = Object.create(BackgroundDrawable.prototype);
@@ -408,7 +407,7 @@ BackgroundObject.prototype.update = function(dt) {
   // if object goes out of sight, reset
   if (this.y < -this.height) {
     // places object back at the bottom of the canvas
-    this.y = canvasHeight + 256;
+    this.y = CANVAS_HEIGHT + 256;
     // not passing anymore
     this.passing = false;
   }
@@ -438,9 +437,9 @@ BackgroundObject.prototype.render = function() {
 // Sets this.passing as true
 BackgroundObject.prototype.spawn = function() {
   this.passing = true;
-  this.y = canvasHeight;
+  this.y = CANVAS_HEIGHT;
   this.x = this.defaultX ||
-           -512 + (Math.random() * (canvasWidth - this.width));
+           -512 + (Math.random() * (CANVAS_WIDTH - this.width));
 };
 
 
@@ -471,7 +470,7 @@ var Protagonist = function() {
   // only calculates these once and stores for collision detection
   this.halfSide = this.side/2;
   // centers player overhead at the beginning
-  this.x = halfCanvasWidth - this.halfSide;
+  this.x = HALF_CANVAS_WIDTH - this.halfSide;
   this.y = 30;
   // player health
   this.health = 100;
@@ -502,8 +501,8 @@ Protagonist.prototype.constructor = Protagonist;
 
 // Updates the protagonist instance with every animation request
 Protagonist.prototype.update = function() {
-  // Checks to ensure player is not warping
-  if (!this.warping) {
+  // Checks to ensure player is not warPIng
+  if (!this.warPIng) {
     // health regenerates slowly
     if (this.health < 100) {
       this.health += this.regenFactor;
@@ -514,9 +513,9 @@ Protagonist.prototype.update = function() {
     this.y -= this.drift;
     // keeps player fixed if moving fast ==> better feel
     // and if there is a warp gate ==> allows quick access by freeing motion
-    if (this.velY > this.maxSpeed/2
-        && !warp.active
-        && this.y > canvasHeight/3 - this.side) {
+    if (this.velY > this.maxSpeed/2 &&
+        !warp.active &&
+        this.y > CANVAS_HEIGHT/3 - this.side) {
       this.y -= (this.velY - this.drift);
     }
     // Makes sure player remains visible within bounds
@@ -524,7 +523,7 @@ Protagonist.prototype.update = function() {
     // reassigns sprite based on velocity
     this.orientSprite();
     // makes sure only to check warp entry if gate is warpable
-    // prevents rewarping on exit
+    // prevents rewarPIng on exit
     if (warp.warpable) {
       this.checkWarpEntry();
     }
@@ -537,7 +536,7 @@ Protagonist.prototype.update = function() {
       this.enteredWarp = false;
     }
   }
-}
+};
 
 
 // Orients sprite based on velocity of the player
@@ -571,7 +570,7 @@ Protagonist.prototype.render = function() {
                 this.y,
                 this.side,
                 this.side);
-  // only shows if player is not warping
+  // only shows if player is not warPIng
   this.displayHealth();
   this.displayTravel();
 };
@@ -590,7 +589,7 @@ Protagonist.prototype.moveTowards = function(input) {
   // calculates angle between click and player
   var pathAngle = Math.atan2(yDist, xDist);
   if (pathAngle < 0) {
-    pathAngle = tau + pathAngle;
+    pathAngle = TAU + pathAngle;
   }
   // declares x and y vectors relative to maxSpeed
   this.velX = Math.cos(pathAngle) * this.maxSpeed;
@@ -603,7 +602,7 @@ Protagonist.prototype.move = function() {
   this.y += this.velY;
   this.velX *= this.deceleration;
   this.velY *= this.deceleration;
-}
+};
 
 // Ensure player doesn't travel outside visible bounds
 Protagonist.prototype.checkBounds = function() {
@@ -611,16 +610,16 @@ Protagonist.prototype.checkBounds = function() {
     this.x = 0;
     this.velX = 0;
   }
-  else if (this.x + this.velX + this.side > canvasWidth) {
-    this.x = canvasWidth - this.side;
+  else if (this.x + this.velX + this.side > CANVAS_WIDTH) {
+    this.x = CANVAS_WIDTH - this.side;
     this.velX = 0;
   }
   if (this.y + this.velY < 0) {
     this.y = 0;
     this.velY = 0;
   }
-  else if (this.y > canvasHeight - this.side - this.velY) {
-    this.y = canvasHeight - this.side;
+  else if (this.y > CANVAS_HEIGHT - this.side - this.velY) {
+    this.y = CANVAS_HEIGHT - this.side;
     this.velY = 0;
   }
 };
@@ -640,10 +639,10 @@ Protagonist.prototype.displayHealth = function() {
   else {
     ctx.fillStyle = 'red';
   }
-  ctx.fillRect(canvasWidth - 102, 10, this.health, 20);
+  ctx.fillRect(CANVAS_WIDTH - 102, 10, this.health, 20);
   ctx.strokeStyle = 'white';
   ctx.lineWidth = 2;
-  ctx.strokeRect(canvasWidth - 102, 10, 100, 20);
+  ctx.strokeRect(CANVAS_WIDTH - 102, 10, 100, 20);
 };
 
 // shows distance traveled
@@ -660,7 +659,7 @@ Protagonist.prototype.respawn = function() {
   this.crashed = false;
   this.traveled = 0;
   this.health = 100;
-  this.x = halfCanvasWidth - this.halfSide;
+  this.x = HALF_CANVAS_WIDTH - this.halfSide;
   this.y = 30;
   this.velX = 0;
   this.velY = 2;
@@ -680,9 +679,9 @@ var Warp = function() {
   this.src = 'img/warp-gate-2.png';
   this.sound = 'audio/warp.wav';
   this.active = false;
-  this.warpingObjects = [];
+  this.warPIngObjects = [];
   this.waiting = false;
-  this.warping = false;
+  this.warPIng = false;
   this.warpable = false;
   this.fading = false;
   this.angle = 0;
@@ -727,7 +726,7 @@ Warp.prototype.update = function(dt) {
       // gets globally defined warp sound
       warpSound.get();
       // creates a random position object
-      var randomPos = {'x': Math.random() * canvasWidth, 'y': Math.random() * canvasHeight};
+      var randomPos = {'x': Math.random() * CANVAS_WIDTH, 'y': Math.random() * CANVAS_HEIGHT};
       // resets waiting counter and warp gate properties
       this.counter = 0;
       this.active = true;
@@ -736,12 +735,12 @@ Warp.prototype.update = function(dt) {
       this.warpable = false;
       // if warp gate isn't created in time, the warp gate appears randomly
       this.place(randomPos);
-      // also randomly spawns the warping objects
-      if (warp.warpingObjects.length) {
-        for (var obj = 0; obj < warp.warpingObjects.length; obj++) {
-          warpingObject = warp.warpingObjects.pop();
-          warpingObject.warping = false;
-          warpingObject.warp(randomPos);
+      // also randomly spawns the warPIng objects
+      if (warp.warPIngObjects.length) {
+        for (var obj = 0; obj < warp.warPIngObjects.length; obj++) {
+          warPIngObject = warp.warPIngObjects.pop();
+          warPIngObject.warPIng = false;
+          warPIngObject.warp(randomPos);
         }
       }
     }
@@ -771,7 +770,7 @@ Warp.prototype.fade = function() {
   else {
     this.restart();
   }
-}
+};
 
 // resets warp gate values
 Warp.prototype.restart = function() {
@@ -783,8 +782,8 @@ Warp.prototype.restart = function() {
 
 // controls warp gate rotation
 Warp.prototype.rotate = function() {
-  if (this.angle < tau) {
-    this.angle += tau * dt;
+  if (this.angle < TAU) {
+    this.angle += TAU * dt;
   }
   else {
     this.angle = 0;
@@ -795,14 +794,14 @@ Warp.prototype.rotate = function() {
 Warp.prototype.place = function(input) {
   this.x = input.x - this.side/2;
   this.y = input.y - this.side/2;
-}
+};
 
 // resets warp on game reset
 Warp.prototype.reset = function() {
   this.active = false;
-  this.warping = false;
+  this.warPIng = false;
   this.waiting = false;
-  this.warpingObjects = [];
+  this.warPIngObjects = [];
   this.counter = 0;
   this.alpha = 1;
   this.time = 100;
@@ -819,9 +818,9 @@ var Asteroid = function() {
   Warpable.call(this);
   this.side = 8 + Math.random() * 45;
   this.halfSide = this.side/2;
-  this.x = canvasWidth/2 - this.halfSide;
-  this.y = canvasHeight;
-  this.angle = Math.random() * tau;
+  this.x = CANVAS_WIDTH/2 - this.halfSide;
+  this.y = CANVAS_HEIGHT;
+  this.angle = Math.random() * TAU;
   this.srcSet = ['img/asteroid-1.png', 'img/asteroid-2.png'];
   this.srcIndex = Math.round(Math.random());
   this.src = this.srcSet[this.srcIndex];
@@ -832,7 +831,7 @@ var Asteroid = function() {
   this.acceleration = 1.008;
   this.rotationDirection = Math.round(Math.random()) * 2 - 1;
   this.rotationRate = Math.random() * 0.25;
-}
+};
 
 // define constructor and prototype chain for Asteroids
 Asteroid.prototype = Object.create(Warpable.prototype);
@@ -841,7 +840,7 @@ Asteroid.prototype.constructor = Asteroid;
 // updates asteroid properties
 Asteroid.prototype.update = function(dt) {
   this.rotate();
-  if (!this.warping) {
+  if (!this.warPIng) {
     // moves according to randomly generated velocity
     this.move(dt);
     // resets if asteroid moves out of bounds
@@ -849,19 +848,19 @@ Asteroid.prototype.update = function(dt) {
       this.checkBounds();
     }
     // checks if asteroid has crashed into player
-    if (!protagonist.warping) {
+    if (!protagonist.warPIng) {
       this.checkCrash();
     }
     // makes sure only to check warp entry if gate is warpable
-    // prevents rewarping on exit
+    // prevents rewarPIng on exit
     if (warp.warpable) {
       this.checkWarpEntry();
     }
   }
   else {
     /* play sound when inside wormhole
-    warpingSound.volume = 0.5;
-    warpingSound.play();
+    warPIngSound.volume = 0.5;
+    warPIngSound.play();
     */
   }
   if (this.enteredWarp) {
@@ -956,9 +955,9 @@ Asteroid.prototype.move = function(dt) {
 
 // rotates asteroid
 Asteroid.prototype.rotate = function() {
-  if (this.angle < tau) {
-    // random spin and rate of rotation
-    this.angle += tau * dt * this.rotationRate * this.rotationDirection;
+  if (this.angle < TAU) {
+    // random sPIn and rate of rotation
+    this.angle += TAU * dt * this.rotationRate * this.rotationDirection;
   }
   else {
     this.angle = 0;
@@ -967,10 +966,10 @@ Asteroid.prototype.rotate = function() {
 
 // checks when asteroid travels out visible bounds
 Asteroid.prototype.checkBounds = function() {
-  if (this.x + this.side < 0
-    || this.x > canvasWidth
-    || this.y + this.side < 0
-    || this.y > canvasHeight) {
+  if (this.x + this.side < 0 ||
+    this.x > CANVAS_WIDTH ||
+    this.y + this.side < 0 ||
+    this.y > CANVAS_HEIGHT) {
     this.respawn();
   }
 };
@@ -978,8 +977,8 @@ Asteroid.prototype.checkBounds = function() {
 
 // for when asteroid reaches out of bounds and must be reset
 Asteroid.prototype.respawn = function() {
-  this.x = this.halfSide + Math.random() * canvasWidth - this.side;
-  this.y = canvasHeight;
+  this.x = this.halfSide + Math.random() * CANVAS_WIDTH - this.side;
+  this.y = CANVAS_HEIGHT;
   this.velY = Math.random() * this.maxVelY;
 };
 
@@ -988,16 +987,16 @@ Asteroid.prototype.respawn = function() {
   Instantiate all classes
 *****/
 
-protagonist = new Protagonist();
+var protagonist = new Protagonist();
 
-warp = new Warp();
+var warp = new Warp();
 
 // For background star tile objects
 var starQuadrants = [];
 var quadrantsIndex = 0;
 
-for (var w = -512; w < canvasWidth + 512; w += 512) {
-  for (var h = -256; h < canvasHeight + 256; h += 256) {
+for (var w = -512; w < CANVAS_WIDTH + 512; w += 512) {
+  for (var h = -256; h < CANVAS_HEIGHT + 256; h += 256) {
     starQuadrants[quadrantsIndex] = new BackgroundStars(w, h);
     quadrantsIndex++;
   }

@@ -181,7 +181,7 @@ var Engine = (function(global) {
          * function again as soon as the browser is able to draw another frame.
          */
         win.requestAnimationFrame(main);
-    };
+    }
 
     /* This function does some initial setup that should only occur once,
      * particularly setting the lastTime variable that is required for the
@@ -195,10 +195,13 @@ var Engine = (function(global) {
 
         // checks readiness of audio
         this.checkAudio = window.setInterval(function() {
-            checkReadyState()}, 1000);
+            checkReadyState();
+        }, 1000);
 
         function checkReadyState() {
-            if (spaceAmbience.readyState === 4 && spaceBass.readyState === 4 && wormholeSound.readyState === 4) {
+            if (spaceAmbience.readyState === 4 &&
+                spaceBass.readyState === 4 &&
+                wormholeSound.readyState === 4) {
                 clearInterval(checkAudio);
                 main();
             }
@@ -354,7 +357,7 @@ var Engine = (function(global) {
     Resources.load(['img/asteroid-1.png', 'img/asteroid-2.png']);
     Resources.load('img/protagonist/blue-explosion.png');
 
-    Resources.load('img/warp-gate-2.png')
+    Resources.load('img/warp-gate-2.png');
 
     Resources.load(['img/protagonist/ship-down.png',
                     'img/protagonist/ship-up.png',
@@ -374,7 +377,7 @@ var Engine = (function(global) {
                   'img/space-cluster.png',
                   'img/gibbous-planet.png',
                   'img/star-crescent-planet.png',
-                  'img/asteroid-field-1.png'])
+                  'img/asteroid-field-1.png']);
 
 
     Resources.onReady(init);
