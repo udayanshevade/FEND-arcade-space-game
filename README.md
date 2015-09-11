@@ -4,6 +4,7 @@ frontend-nanodegree-arcade-game
 Instructions on opening the game:
   1. Open the index.html file in a browser and presto.
   2. Click to move and hold click to move fluidly. Double click to warp.
+    2.5. Both you and all asteroids can warp. Pro-tip: don't warp side by side.
   3. Avoid asteroids. If one hits you don't worry bout it. Health regenerates.
   4. Rack up those long distances while conserving health.
   5. Sight-see the universe.
